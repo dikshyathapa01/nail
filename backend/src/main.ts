@@ -10,14 +10,17 @@ config({ path: join(process.cwd(), '.env') });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
-  // CORS updated to allow your live .np domain
-   app.enableCors({ 
-    origin: true, // Automatically reflects and accepts whichever dynamic link Vercel generates!
+
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     credentials: true
   });
 
-  
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
 
