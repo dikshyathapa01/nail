@@ -12,17 +12,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // CORS updated to allow your live .np domain
-  app.enableCors({ 
-    origin: [
-      'http://localhost:5173', 
-      'http://localhost:5174',
-      // 'https://nailinspo.com.np', 
-      // 'https://nailinspo.com.np'
-      'https://onrender.com', 
-    'https://vercel.app'
-    ],
+   app.enableCors({ 
+    origin: true, // Automatically reflects and accepts whichever dynamic link Vercel generates!
     credentials: true
   });
+
   
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
