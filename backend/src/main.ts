@@ -16,8 +16,10 @@ async function bootstrap() {
     origin: [
       'http://localhost:5173', 
       'http://localhost:5174',
-      'https://nailinspo.com.np', 
-      'https://nailinspo.com.np'
+      // 'https://nailinspo.com.np', 
+      // 'https://nailinspo.com.np'
+      'https://onrender.com', 
+    'https://vercel.app'
     ],
     credentials: true
   });
