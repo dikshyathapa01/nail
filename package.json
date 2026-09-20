@@ -8,9 +8,9 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "server:install": "npm --prefix server install",
-    "server:dev": "npm --prefix server run start:dev",
-    "server:build": "npm --prefix server run build"
+    "backend:install": "npm --prefix backend install",
+    "backend:dev": "npm --prefix backend run start:dev",
+    "backend:build": "npm --prefix backend run build"
   },
   "dependencies": {
     "framer-motion": "^13.2.0",
