@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 import { bookingTimes } from "../data";
-
+import { API_BASE_URL } from "../api";
 const formatDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -29,7 +29,7 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
     setLoading(true);
     setSlots([]);
     setAvailabilityError("");
-    fetch(`/api/bookings/availability?date=${encodeURIComponent(value)}`)
+   fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(value)}`)
       .then((r) => {
         if (!r.ok) throw new Error("Unavailable");
         return r.json();

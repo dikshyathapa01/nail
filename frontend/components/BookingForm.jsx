@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { ArrowRight } from "lucide-react";
 import { services, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../data";
 import InstagramIcon from "./InstagramIcon";
-
+import { API_BASE_URL } from "../api";
 export default function BookingForm({ date, time, onSuccess }) {
   const [submitError, setSubmitError] = useState("");
   const [searchParams] = useSearchParams();
@@ -25,7 +25,7 @@ export default function BookingForm({ date, time, onSuccess }) {
   const submit = async (values) => {
     setSubmitError("");
     try {
-      const response = await fetch("/api/bookings", {
+      const response = await fetch(`${API_BASE_URL}/bookings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...values, date, time })
