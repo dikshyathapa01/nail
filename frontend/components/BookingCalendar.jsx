@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 import { bookingTimes } from "../data";
 import { API_BASE_URL } from "../api";
+
 const formatDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -29,14 +30,19 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
     setLoading(true);
     setSlots([]);
     setAvailabilityError("");
-   fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(value)}`)
+
+    fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(value)}`)
       .then((r) => {
         if (!r.ok) throw new Error("Unavailable");
         return r.json();
       })
-      .then((data) => setSlots(data.slots && data.slots.length ? data.slots : bookingTimes.map((time) => ({ time, available: true }))))
-      .catch(() => {
+      .then((data) => {
+        setSlots(data.slots && data.slots.length ? data.slots : bookingTimes.map((time) => ({ time, available: true })));
+      })
+      .catch((err) => {
+        console.error("API error details:", err);
         setAvailabilityError("Availability could not be checked. Please try again.");
+
         setSlots(bookingTimes.map((time) => ({ time, available: false })));
       })
       .finally(() => setLoading(false));
@@ -57,8 +63,6 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
 
   const isPastMonth = year < new Date().getFullYear()
     || (year === new Date().getFullYear() && monthIndex < new Date().getMonth());
-
-  const slotList = slots;
 
   return (
     <div className="calendar-card">
@@ -105,7 +109,7 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
         {availabilityError && <small className="form-error">{availabilityError}</small>}
         {value && (
           <div className="slots">
-            {slotList.map((slot) => (
+            {slots.map((slot) => (
               <button
                 key={slot.time}
                 disabled={!slot.available}
@@ -122,4 +126,3 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
     </div>
   );
 }
-
