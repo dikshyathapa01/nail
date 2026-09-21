@@ -38,7 +38,6 @@ export class NotificationsService {
         host,
         port,
         secure,
-
         auth: {
           user,
           pass,

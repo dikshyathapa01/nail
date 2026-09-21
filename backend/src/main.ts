@@ -1,10 +1,11 @@
 import { config } from 'dotenv';
 import { join } from 'node:path';
+import dns from 'node:dns';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-
+dns.setDefaultResultOrder('ipv4first');
 // Look for .env in the project directory instead of the parent folder
 config({ path: join(process.cwd(), '.env') });
 
