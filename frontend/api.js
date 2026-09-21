@@ -1,5 +1,3 @@
-const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
-
-export const API_BASE_URL = configuredApiUrl
-  ? configuredApiUrl.replace(/\/+$/, "")
-  : "/api";
+export const API_BASE_URL = import.meta.env.PROD
+  ? "https://nail-inspo.onrender.com/api"
+  : "http://localhost:5000/api";

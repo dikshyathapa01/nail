@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import { bookingTimes } from "../data";
+import { BOOKING_TIMES } from "../data";
 import { API_BASE_URL } from "../api";
 
 const formatDate = (date) => {
@@ -37,13 +37,13 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
         return r.json();
       })
       .then((data) => {
-        setSlots(data.slots && data.slots.length ? data.slots : bookingTimes.map((time) => ({ time, available: true })));
+        setSlots(data.slots && data.slots.length ? data.slots : BOOKING_TIMES.map((time) => ({ time, available: true })));
       })
       .catch((err) => {
         console.error("API error details:", err);
-        setAvailabilityError("Availability could not be checked. Please try again.");
+        setAvailabilityError(err.message || "Availability could not be checked. Please click again.");
 
-        setSlots(bookingTimes.map((time) => ({ time, available: false })));
+        setSlots(BOOKING_TIMES.map((time) => ({ time, available: true })));
       })
       .finally(() => setLoading(false));
   }, [value]);
@@ -117,7 +117,7 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
                 onClick={() => onTimeChange(slot.time)}
               >
                 {slot.time}
-                <small>{slot.available ? "Available" : "Booked"}</small>
+                <small>{slot.available ? "Available" : availabilityError ? "Unavailable" : "Booked"}</small>
               </button>
             ))}
           </div>

@@ -117,7 +117,7 @@ export const gallery = [
   { image: front, title: "Curated Press-On Kits", category: "Press-Ons" },
 ];
 
-export const bookingTimes = [
+export const BOOKING_TIMES = [
   "09:00 - 10:30",
   "11:00 - 12:30",
   "13:30 - 15:00",
