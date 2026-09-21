@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { join } from 'node:path';
-import dns from 'node:dns';
+import * as dns from 'node:dns';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
