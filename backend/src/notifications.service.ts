@@ -1,310 +1,133 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-
-  private transporter: nodemailer.Transporter | null = null;
+  private readonly resend: Resend;
 
   constructor() {
-    const host = process.env.SMTP_HOST;
-    const portStr = process.env.SMTP_PORT;
-    const secureStr = process.env.SMTP_SECURE;
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const apiKey = process.env.RESEND_API_KEY;
 
-    if (!host || !portStr || !user || !pass) {
-      this.logger.error(
-        'SMTP configuration is missing. Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS',
-      );
-      return;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not configured');
     }
 
-    const port = Number(portStr);
-    const secure = secureStr === 'true';
-
-    if (Number.isNaN(port)) {
-      this.logger.error(`Invalid SMTP_PORT: ${portStr}`);
-      return;
-    }
-
-    this.logger.log(
-      `Creating SMTP transporter: host=${host}, port=${port}, secure=${secure}, user=${user}`,
-    );
-
-    try {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: {
-          user,
-          pass,
-        },
-
-        // Prevent Render from waiting forever if SMTP cannot connect.
-        connectionTimeout: 15000,
-        greetingTimeout: 15000,
-        socketTimeout: 20000,
-      });
-
-      this.logger.log('SMTP transporter created successfully.');
-
-      // Verify the Gmail SMTP connection.
-      this.transporter.verify((error) => {
-        if (error) {
-          this.logger.error(
-            `SMTP VERIFICATION FAILED: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
-        } else {
-          this.logger.log('SMTP VERIFICATION SUCCESSFUL');
-        }
-      });
-    } catch (error) {
-      this.logger.error(
-        `Failed to create SMTP transporter: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-
-      this.transporter = null;
-    }
+    this.resend = new Resend(apiKey);
   }
 
   async sendAdminNotification(booking: any): Promise<void> {
     this.logger.log('Starting admin booking email notification...');
 
-    if (!this.transporter) {
-      throw new Error('SMTP transporter is not configured.');
-    }
+    const notificationEmail =
+      process.env.NOTIFICATION_EMAIL || 'dikshyathapa987@gmail.com';
 
-    const to =
-      process.env.NOTIFICATION_EMAIL ||
-      process.env.SMTP_USER;
-
-    if (!to) {
-      throw new Error(
-        'NOTIFICATION_EMAIL and SMTP_USER are both missing.',
-      );
-    }
-
-    const from =
-      process.env.EMAIL_FROM ||
-      process.env.SMTP_USER;
+    const emailFrom =
+      process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
     const {
-      name = 'N/A',
-      service = 'N/A',
-      date = 'N/A',
-      time = 'N/A',
-      phone = 'N/A',
-      email = 'N/A',
-      notes = 'None',
-    } = booking || {};
+      name,
+      service,
+      date,
+      time,
+      phone,
+      email,
+      notes,
+    } = booking;
+
+    this.logger.log(
+      `Attempting to send booking email to ${notificationEmail}...`,
+    );
 
     const html = `
       <!DOCTYPE html>
       <html>
-        <body
-          style="
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-          "
-        >
-          <h2>New Appointment Booking</h2>
+        <head>
+          <meta charset="UTF-8" />
+          <title>New Nail Booking</title>
+        </head>
 
-          <p>
-            A new appointment has been booked through
-            your portfolio website.
-          </p>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>New Nail Appointment Booking</h2>
+
+          <p>A new appointment has been booked.</p>
 
           <table
-            style="
-              border-collapse: collapse;
-              width: 100%;
-              max-width: 600px;
-            "
+            cellpadding="8"
+            cellspacing="0"
+            border="1"
+            style="border-collapse: collapse;"
           >
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Name</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${name}
-              </td>
+              <td><strong>Name</strong></td>
+              <td>${name ?? ''}</td>
             </tr>
 
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Service</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${service}
-              </td>
+              <td><strong>Service</strong></td>
+              <td>${service ?? ''}</td>
             </tr>
 
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Date</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${date}
-              </td>
+              <td><strong>Date</strong></td>
+              <td>${date ?? ''}</td>
             </tr>
 
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Time</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${time}
-              </td>
+              <td><strong>Time</strong></td>
+              <td>${time ?? ''}</td>
             </tr>
 
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Phone</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${phone}
-              </td>
+              <td><strong>Phone</strong></td>
+              <td>${phone ?? ''}</td>
             </tr>
 
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Email</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${email}
-              </td>
+              <td><strong>Email</strong></td>
+              <td>${email ?? ''}</td>
             </tr>
 
             <tr>
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                <strong>Notes</strong>
-              </td>
-
-              <td
-                style="
-                  padding: 8px;
-                  border: 1px solid #ddd;
-                "
-              >
-                ${notes}
-              </td>
+              <td><strong>Notes</strong></td>
+              <td>${notes ?? ''}</td>
             </tr>
           </table>
 
           <p>
-            <strong>
-              Appointment successfully saved in the database.
-            </strong>
+            Please check the admin booking system for more details.
           </p>
         </body>
       </html>
     `;
 
     try {
-      this.logger.log(
-        `Attempting to send booking email to ${to}...`,
-      );
-
-      const info = await this.transporter.sendMail({
-        from,
-        to,
-        subject: `New Booking Confirmed: ${service} - ${name} (${date} at ${time})`,
+      const { data, error } = await this.resend.emails.send({
+        from: emailFrom,
+        to: [notificationEmail],
+        subject: `New Nail Booking - ${name ?? 'Customer'}`,
         html,
+        replyTo: email || undefined,
       });
 
-      this.logger.log(
-        `EMAIL SENT SUCCESSFULLY. MessageId=${info.messageId}`,
-      );
+      if (error) {
+        this.logger.error(
+          `RESEND EMAIL FAILED: ${JSON.stringify(error)}`,
+        );
+
+        throw new Error(
+          error.message || 'Resend failed to send the email',
+        );
+      }
 
       this.logger.log(
-        `Booking notification sent to ${to}`,
+        `EMAIL SENT SUCCESSFULLY. Resend ID=${data?.id}`,
       );
     } catch (error) {
-      this.logger.error(
-        `EMAIL SEND FAILED: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        error instanceof Error ? error.stack : undefined,
-      );
+      const message =
+        error instanceof Error ? error.message : String(error);
+
+      this.logger.error(`EMAIL SEND FAILED: ${message}`);
 
       throw error;
     }
