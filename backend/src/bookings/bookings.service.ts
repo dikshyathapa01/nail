@@ -2,6 +2,7 @@ import { ConflictException, Injectable, OnModuleInit, OnModuleDestroy } from '@n
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import { BOOKING_TIMES, CreateBookingDto } from './dto/create-booking.dto';
+import { NotificationsService } from '../notifications.service';
 
 type StoredBooking = CreateBookingDto & {
   id: string;
@@ -17,6 +18,8 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
       rejectUnauthorized: false,
     },
   });
+
+  constructor(private readonly notificationsService: NotificationsService) {}
 
   async onModuleInit() {
     if (!process.env.DATABASE_URL) {
@@ -80,6 +83,9 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
         ],
       );
       const savedBooking = result.rows[0];
+
+      // Fire-and-forget admin notification (independent and decoupled)
+      void this.notificationsService.sendAdminNotification(savedBooking).catch(() => {});
 
       return {
         id: savedBooking.id,
