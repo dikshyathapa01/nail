@@ -14,14 +14,19 @@ export class NotificationsService {
     const pass = process.env.SMTP_PASS;
 
     if (!host || !portStr || !user || !pass) {
-      this.logger.warn(
-        'SMTP configuration is missing or incomplete (requires SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS). Email notifications will be disabled.',
+      this.logger.error(
+        'SMTP configuration is missing. Required: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS',
       );
       return;
     }
 
     const port = Number(portStr);
     const secure = secureStr === 'true';
+
+    if (Number.isNaN(port)) {
+      this.logger.error(`Invalid SMTP_PORT: ${portStr}`);
+      return;
+    }
 
     try {
       this.transporter = nodemailer.createTransport({
@@ -33,25 +38,48 @@ export class NotificationsService {
           pass,
         },
       });
-      this.logger.log('SMTP transporter successfully initialized.');
+
+      this.logger.log(
+        `SMTP transporter initialized: host=${host}, port=${port}, secure=${secure}, user=${user}`,
+      );
+
+      // Verify SMTP connection when the server starts.
+      this.transporter.verify((error) => {
+        if (error) {
+          this.logger.error(
+            `SMTP VERIFICATION FAILED: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        } else {
+          this.logger.log('SMTP VERIFICATION SUCCESSFUL');
+        }
+      });
     } catch (error) {
-      this.logger.error('Failed to initialize SMTP transporter', error);
+      this.logger.error(
+        `Failed to initialize SMTP transporter: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+
       this.transporter = null;
     }
   }
 
   async sendAdminNotification(booking: any): Promise<void> {
     if (!this.transporter) {
-      this.logger.warn('Email notification skipped: SMTP transporter is not configured.');
-      return;
+      throw new Error('SMTP transporter is not configured.');
     }
 
     const to = process.env.NOTIFICATION_EMAIL || process.env.SMTP_USER;
+
     if (!to) {
-      this.logger.warn('Email notification skipped: Neither NOTIFICATION_EMAIL nor SMTP_USER is set.');
-      return;
+      throw new Error(
+        'NOTIFICATION_EMAIL and SMTP_USER are both missing.',
+      );
     }
 
+    // For Gmail testing, keep EMAIL_FROM the same as SMTP_USER.
     const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
 
     const {
@@ -65,64 +93,78 @@ export class NotificationsService {
     } = booking || {};
 
     const html = `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-        <div style="background-color: #f72585; color: #ffffff; padding: 18px 24px;">
-          <h2 style="margin: 0; font-size: 20px;">New Booking Notification</h2>
-        </div>
-        <div style="padding: 24px;">
-          <p style="margin-top: 0;">A new appointment has been successfully scheduled. Here are the details:</p>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
-            <tbody>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold; width: 35%;">Client Name:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${name}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Service:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${service}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Date:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${date}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Time:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${time}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Phone:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${phone || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Email:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${email || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-weight: bold;">Notes:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${notes || 'None'}</td>
-              </tr>
-            </tbody>
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>New Appointment Booking</h2>
+
+          <p>A new appointment has been booked through your portfolio website.</p>
+
+          <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Name</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${name}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Service</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${service}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Date</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${date}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Time</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${time}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Phone</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${phone}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Email</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${email}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd;"><strong>Notes</strong></td>
+              <td style="padding: 8px; border: 1px solid #ddd;">${notes}</td>
+            </tr>
           </table>
-          <p style="font-size: 12px; color: #888; margin-top: 24px; margin-bottom: 0;">
-            This is an automated notification sent from the Studio Appointment Booking System.
+
+          <p>
+            <strong>Appointment successfully saved in the database.</strong>
           </p>
-        </div>
-      </div>
+        </body>
+      </html>
     `;
 
     try {
-      await this.transporter.sendMail({
+      const info = await this.transporter.sendMail({
         from,
         to,
         subject: `New Booking Confirmed: ${service} - ${name} (${date} at ${time})`,
         html,
       });
-      this.logger.log(`Admin booking notification sent to ${to}`);
+
+      this.logger.log(
+        `EMAIL SENT SUCCESSFULLY. To=${to}, MessageId=${info.messageId}`,
+      );
     } catch (error) {
       this.logger.error(
-        `Failed to send admin notification email: ${error instanceof Error ? error.message : String(error)}`,
+        `EMAIL SEND FAILED: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
         error instanceof Error ? error.stack : undefined,
       );
+
+      // Re-throw so BookingsService can see the error.
+      throw error;
     }
   }
 }
