@@ -132,11 +132,26 @@ export default function Home() {
 
           <div className="service-cards">
             {services.slice(0, 8).map((service, index) => (
-              <article className="service-card" key={service.name}>
+              <motion.article
+                className="service-card"
+                key={service.name}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.55, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
+              >
                 <span className="service-number">{String(index + 1).padStart(2, "0")}</span>
                 <span className="service-category-badge">{service.category}</span>
                 <div className="service-image-wrap">
-                  <img src={service.image} alt={service.name} loading="lazy" />
+                  <motion.img
+                    src={service.image}
+                    alt={service.name}
+                    loading="lazy"
+                    initial={{ opacity: 0, scale: 1.06 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true, margin: "-40px" }}
+                    transition={{ duration: 0.7, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                  />
                 </div>
                 <div className="service-card-body">
                   <h3>{service.name}</h3>
@@ -155,7 +170,7 @@ export default function Home() {
                     </Link>
                   </div>
                 </div>
-              </article>
+              </motion.article>
             ))}
           </div>
 

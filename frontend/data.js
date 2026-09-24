@@ -65,7 +65,7 @@ export const services = [
     category: "Gel & Extensions",
     duration: "45 mins",
     description: "Meticulous cuticle prep, bespoke shaping, and seamless milky white ombre or glass-sheen gel polish for an effortlessly clean aesthetic.",
-    image: nnMarble,
+    image: waCoffeeMarble,
   },
   {
     name: "Hand-Painted Accent Art",
@@ -79,7 +79,7 @@ export const services = [
     category: "Nail Art",
     duration: "60 mins",
     description: "Soft blooming quartz textures, wave lines, and rich coffee-cream tonal gradients smoothly blended for an artistic, organic look.",
-    image: waCoffeeMarble,
+    image: nailsPlant,
   },
   {
     name: "Press-On Sizing & Custom Consultation",
@@ -103,7 +103,6 @@ export const gallery = [
   { image: waSwirlAlmond, title: "Minimalist Swirl French", category: "Gel & BIAB" },
   { image: waHearts, title: "Pink Aura & Heart Sparkles", category: "Nail Art" },
   { image: biabNude, title: "Glossy Almond BIAB", category: "Gel & BIAB" },
-  { image: nnMarble, title: "Milky Ombre on Marble", category: "Gel & BIAB" },
   { image: waCoffeeMarble, title: "Coffee & Cream Marble", category: "Nail Art" },
   { image: nnGlitterAcrylic, title: "Golden Stiletto Extensions", category: "Acrylics" },
   { image: nnPorcelainFloral, title: "3D Porcelain Florals & Dots", category: "Nail Art" },
