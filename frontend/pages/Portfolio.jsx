@@ -96,7 +96,7 @@ export default function Portfolio() {
             <p>Book an appointment at our Kathmandu studio or order a bespoke reusable press-on set customized to your nail measurements.</p>
           </div>
           <div className="portfolio-cta-actions">
-            <Link className="explore-pill-btn" to="/booking">
+            <Link className="explore-pill-btn" to="/booking#booking-calendar-section">
               Book Appointment <ArrowRight size={15} />
             </Link>
             <a className="frosted-pill-btn" href={INSTAGRAM_URL} target="_blank" rel="noreferrer">

@@ -26,8 +26,10 @@ export class BookingsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List booking requests for studio administration' })
-  list() {
-    return this.bookingsService.list();
+  @ApiOperation({ summary: 'List booking requests for studio administration or filtered by user' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter bookings by User UUID' })
+  @ApiQuery({ name: 'email', required: false, description: 'Filter bookings by customer email' })
+  list(@Query('userId') userId?: string, @Query('email') email?: string) {
+    return this.bookingsService.list(userId, email);
   }
 }

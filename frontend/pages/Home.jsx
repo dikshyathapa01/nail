@@ -63,10 +63,14 @@ export default function Home() {
             </motion.p>
 
             <motion.div
+              style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.85, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
+              <Link to="/booking#booking-calendar-section" className="dark-button">
+                BOOK SESSION <ArrowRight size={14} />
+              </Link>
               <Link to="/portfolio" className="explore-pill-btn">
                 EXPLORE DESIGNS
               </Link>
@@ -145,7 +149,7 @@ export default function Home() {
                   <div className="service-card-actions">
                     <Link
                       className="dark-button service-book-btn"
-                      to={`/booking?service=${encodeURIComponent(service.name)}`}
+                      to={`/booking?service=${encodeURIComponent(service.name)}#booking-calendar-section`}
                     >
                       Book Now <ArrowRight size={14} />
                     </Link>
@@ -235,7 +239,7 @@ export default function Home() {
                 crafted to your personal design ideas.
               </p>
               <div className="banner-actions">
-                <Link className="dark-button" to="/booking">
+                <Link className="dark-button" to="/booking#booking-calendar-section">
                   Book Studio Appointment <ArrowRight size={16} />
                 </Link>
                 <a

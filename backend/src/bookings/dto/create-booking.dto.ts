@@ -23,11 +23,17 @@ export const BOOKING_TIMES = [
 
 export class CreateBookingDto {
 
+  @ApiProperty({ required: false, format: 'date', example: '2026-09-21' })
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  booking_date?: string;
+
   @ApiProperty({ enum: BOOKING_SERVICES, example: 'Signature Milky Gel Manicure' })
   @IsIn(BOOKING_SERVICES)
   service: (typeof BOOKING_SERVICES)[number];
 
   @ApiProperty({ format: 'date', example: '2026-09-21' })
+  @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   date: string;
 
@@ -58,4 +64,15 @@ export class CreateBookingDto {
   @IsString()
   @MaxLength(300)
   notes?: string;
+
+  @ApiProperty({ required: false, example: 'd3b07384-d113-4638-9562-b91c89069d2a' })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @ApiProperty({ required: false, maxLength: 300 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  details?: string;
 }

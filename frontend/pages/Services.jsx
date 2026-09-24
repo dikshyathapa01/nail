@@ -94,7 +94,7 @@ export default function Services() {
                 <div className="service-card-actions">
                   <Link
                     className="explore-pill-btn service-book-btn"
-                    to={`/booking?service=${encodeURIComponent(service.name)}`}
+                    to={`/booking?service=${encodeURIComponent(service.name)}#booking-calendar-section`}
                   >
                     Book Appointment <ArrowRight size={14} style={{ marginLeft: "6px" }} />
                   </Link>

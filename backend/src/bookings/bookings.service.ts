@@ -2,277 +2,165 @@ import {
   ConflictException,
   Injectable,
   Logger,
-  OnModuleDestroy,
-  OnModuleInit,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
-import { Pool } from 'pg';
-
+import { InjectRepository } from '@nestjs/typeorm';
+import { ILike, Repository } from 'typeorm';
+import { Booking, BookingStatus } from './booking.entity';
 import {
   BOOKING_TIMES,
   CreateBookingDto,
 } from './dto/create-booking.dto';
-
 import { NotificationsService } from '../notifications.service';
-
-type StoredBooking = CreateBookingDto & {
-  id: string;
-  createdAt: string;
-};
+import { User } from '../auth/user.entity';
+import { verifyRealEmail } from '../common/email-verifier';
 
 @Injectable()
-export class BookingsService
-  implements OnModuleInit, OnModuleDestroy
-{
+export class BookingsService {
   private readonly logger = new Logger(BookingsService.name);
 
-  private readonly pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
-  });
-
   constructor(
+    @InjectRepository(Booking)
+    private readonly bookingRepository: Repository<Booking>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async onModuleInit() {
-    if (!process.env.DATABASE_URL) {
-      throw new Error(
-        'DATABASE_URL is required to start the booking API.',
-      );
-    }
-
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS bookings (
-        id UUID PRIMARY KEY,
-        service VARCHAR(100) NOT NULL,
-        "date" DATE NOT NULL,
-        "time" VARCHAR(30) NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        phone VARCHAR(30),
-        email VARCHAR(160),
-        notes VARCHAR(300),
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        UNIQUE ("date", "time")
-      )
-    `);
-
-    this.logger.log('Bookings database initialized successfully.');
+  private toResponse(booking: Booking) {
+    return {
+      id: booking.id,
+      service: booking.service,
+      date: booking.date || booking.bookingDate,
+      booking_date: booking.bookingDate || booking.date,
+      time: booking.time,
+      name: booking.name,
+      phone: booking.phone,
+      email: booking.email,
+      notes: booking.notes || booking.details,
+      details: booking.details || booking.notes,
+      userId: booking.user?.id || booking.userId || null,
+      status: booking.status,
+      createdAt: booking.createdAt?.toISOString(),
+    };
   }
 
   async create(booking: CreateBookingDto) {
-    const now = new Date();
+    if (booking.email) {
+      await verifyRealEmail(booking.email);
+    }
 
-    const today = [
-      now.getFullYear(),
-      now.getMonth() + 1,
-      now.getDate(),
-    ]
+    const bookingDate = booking.date || booking.booking_date;
+    if (!bookingDate) {
+      throw new ConflictException('A booking date is required.');
+    }
+
+    const now = new Date();
+    const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
       .map((part) => String(part).padStart(2, '0'))
       .join('-');
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [hours, minutes] = booking.time.slice(0, 5).split(':').map(Number);
 
-    const currentMinutes =
-      now.getHours() * 60 + now.getMinutes();
-
-    const [hours, minutes] = booking.time
-      .slice(0, 5)
-      .split(':')
-      .map(Number);
-
-    // Prevent booking a time that has already passed today.
-    if (
-      booking.date === today &&
-      currentMinutes >= hours * 60 + minutes
-    ) {
+    if (bookingDate === today && currentMinutes >= hours * 60 + minutes) {
       throw new ConflictException(
         'That appointment time has already passed. Please choose another slot.',
       );
     }
 
-    // Check whether this time is already booked.
-    const existingBooking = await this.pool.query(
-      'SELECT 1 FROM bookings WHERE "date" = $1 AND "time" = $2',
-      [booking.date, booking.time],
-    );
-
-    if (
-      existingBooking.rowCount &&
-      existingBooking.rowCount > 0
-    ) {
+    const existingBooking = await this.bookingRepository.findOne({
+      where: { date: bookingDate, time: booking.time },
+    });
+    if (existingBooking) {
       throw new ConflictException(
         'That time is already requested. Please choose another slot.',
       );
     }
 
+    const user = booking.userId
+      ? await this.userRepository.findOne({ where: { id: booking.userId } })
+      : null;
+
+    const entity = this.bookingRepository.create({
+      user: user || null,
+      service: booking.service,
+      date: bookingDate,
+      bookingDate,
+      time: booking.time,
+      status: BookingStatus.PENDING,
+      details: booking.details || booking.notes || null,
+      name: booking.name,
+      phone: booking.phone || null,
+      email: booking.email || null,
+      notes: booking.notes || booking.details || null,
+    });
+
+    let savedBooking: Booking;
     try {
-      // Save booking to PostgreSQL.
-      const result = await this.pool.query<StoredBooking>(
-        `
-          INSERT INTO bookings (
-            id,
-            service,
-            "date",
-            "time",
-            name,
-            phone,
-            email,
-            notes
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING
-            id,
-            service,
-            "date" AS date,
-            "time" AS time,
-            name,
-            phone,
-            email,
-            notes,
-            created_at AS "createdAt"
-        `,
-        [
-          randomUUID(),
-          booking.service,
-          booking.date,
-          booking.time,
-          booking.name,
-          booking.phone ?? null,
-          booking.email ?? null,
-          booking.notes ?? null,
-        ],
-      );
-
-      const savedBooking = result.rows[0];
-
-      this.logger.log(
-        `Booking created successfully: ${savedBooking.id}`,
-      );
-
-      /*
-       * Send email notification.
-       *
-       * We intentionally await this during debugging so
-       * SMTP errors appear clearly in Render logs.
-       */
-      try {
-        await this.notificationsService.sendAdminNotification(
-          savedBooking,
-        );
-
-        this.logger.log(
-          `Booking notification email sent for booking ${savedBooking.id}`,
-        );
-      } catch (emailError) {
-        this.logger.error(
-          `Booking was saved, but notification email failed: ${
-            emailError instanceof Error
-              ? emailError.message
-              : String(emailError)
-          }`,
-        );
-
-        /*
-         * We do NOT delete the booking if the email fails.
-         *
-         * The appointment is already saved in the database.
-         * The email problem should be fixed separately.
-         */
-      }
-
-      return {
-        id: savedBooking.id,
-        service: savedBooking.service,
-        date: savedBooking.date,
-        time: savedBooking.time,
-        name: savedBooking.name,
-        phone: savedBooking.phone,
-        email: savedBooking.email,
-        notes: savedBooking.notes,
-        message: 'Your appointment request has been received.',
-      };
+      savedBooking = await this.bookingRepository.save(entity);
     } catch (error) {
-      // PostgreSQL unique constraint violation.
-      if (
-        (error as { code?: string }).code === '23505'
-      ) {
+      if ((error as { code?: string }).code === '23505') {
         throw new ConflictException(
           'That time is already requested. Please choose another slot.',
         );
       }
-
       throw error;
     }
+
+    const response = this.toResponse(savedBooking);
+    this.logger.log(`Booking created successfully: ${savedBooking.id}`);
+
+    try {
+      await this.notificationsService.sendAdminNotification(response);
+      this.logger.log(`Booking notification email sent for booking ${savedBooking.id}`);
+    } catch (emailError) {
+      this.logger.error(
+        `Booking was saved, but notification email failed: ${
+          emailError instanceof Error ? emailError.message : String(emailError)
+        }`,
+      );
+    }
+
+    return {
+      ...response,
+      message: 'Your appointment request has been received.',
+    };
   }
 
   async getAvailability(date: string) {
-    const result = await this.pool.query<{ time: string }>(
-      'SELECT "time" FROM bookings WHERE "date" = $1',
-      [date],
-    );
-
-    const bookedTimes = new Set(
-      result.rows.map((booking) => booking.time),
-    );
+    const bookings = await this.bookingRepository.find({
+      where: { date },
+    });
+    const bookedTimes = new Set(bookings.map((booking) => booking.time));
 
     const now = new Date();
-
-    const today = [
-      now.getFullYear(),
-      now.getMonth() + 1,
-      now.getDate(),
-    ]
+    const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
       .map((part) => String(part).padStart(2, '0'))
       .join('-');
-
-    const currentMinutes =
-      now.getHours() * 60 + now.getMinutes();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     return {
       date,
-
       slots: BOOKING_TIMES.map((time) => {
-        const [hours, minutes] = time
-          .slice(0, 5)
-          .split(':')
-          .map(Number);
-
-        const hasStarted =
-          date === today &&
-          currentMinutes >= hours * 60 + minutes;
-
-        return {
-          time,
-          available:
-            !bookedTimes.has(time) && !hasStarted,
-        };
+        const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
+        const hasStarted = date === today && currentMinutes >= hours * 60 + minutes;
+        return { time, available: !bookedTimes.has(time) && !hasStarted };
       }),
     };
   }
 
-  async list() {
-    const result = await this.pool.query<StoredBooking>(
-      `
-        SELECT
-          id,
-          service,
-          "date" AS date,
-          "time" AS time,
-          name,
-          phone,
-          email,
-          notes,
-          created_at AS "createdAt"
-        FROM bookings
-        ORDER BY created_at DESC
-      `,
-    );
+  async list(userId?: string, email?: string) {
+    const where = userId || email
+      ? [
+          ...(userId ? [{ user: { id: userId } }] : []),
+          ...(email ? [{ email: ILike(email) }] : []),
+        ]
+      : undefined;
 
-    return result.rows;
-  }
-
-  async onModuleDestroy() {
-    await this.pool.end();
+    const bookings = await this.bookingRepository.find({
+      where,
+      relations: { user: true },
+      order: { createdAt: 'DESC' },
+    });
+    return bookings.map((booking) => this.toResponse(booking));
   }
 }
