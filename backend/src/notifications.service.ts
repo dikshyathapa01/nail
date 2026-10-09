@@ -1,128 +1,86 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Resend } from 'resend';
+import {
+  BookingEmailData,
+  renderBookingEmail,
+} from './common/booking-email.template';
+
+const EMAIL_FROM_PATTERN = /^(?:[^<>]+\s*)?<[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+>|[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private readonly resend: Resend;
+  private readonly resend?: Resend;
 
   constructor() {
     const apiKey = process.env.RESEND_API_KEY;
 
     if (!apiKey) {
-      throw new Error('RESEND_API_KEY is not configured');
+      this.logger.warn(
+        'RESEND_API_KEY is not configured; booking emails are disabled.',
+      );
+      return;
     }
 
     this.resend = new Resend(apiKey);
   }
 
-  async sendAdminNotification(booking: any): Promise<void> {
+  async sendAdminNotification(booking: BookingEmailData): Promise<void> {
     this.logger.log('Starting admin booking email notification...');
+
+    if (!this.resend) {
+      this.logger.error('Cannot send booking email: Resend is not configured.');
+      return;
+    }
 
     const notificationEmail =
       process.env.NOTIFICATION_EMAIL || 'dikshyathapa987@gmail.com';
 
-    const emailFrom =
-      process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    const emailFrom = process.env.EMAIL_FROM?.trim();
 
-    const {
-      name,
-      service,
-      date,
-      time,
-      phone,
-      email,
-      notes,
-    } = booking;
+    if (!emailFrom) {
+      this.logger.error('Cannot send booking email: EMAIL_FROM is not configured.');
+      return;
+    }
+
+    if (!EMAIL_FROM_PATTERN.test(emailFrom)) {
+      throw new Error(
+        `Invalid EMAIL_FROM configuration: "${emailFrom}". Set it to an email such as onboarding@resend.dev or "Nail Inspo <bookings@your-verified-domain.com>".`,
+      );
+    }
 
     this.logger.log(
       `Attempting to send booking email to ${notificationEmail}...`,
     );
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <title>New Nail Booking</title>
-        </head>
-
-        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2>New Nail Appointment Booking</h2>
-
-          <p>A new appointment has been booked.</p>
-
-          <table
-            cellpadding="8"
-            cellspacing="0"
-            border="1"
-            style="border-collapse: collapse;"
-          >
-            <tr>
-              <td><strong>Name</strong></td>
-              <td>${name ?? ''}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Service</strong></td>
-              <td>${service ?? ''}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Date</strong></td>
-              <td>${date ?? ''}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Time</strong></td>
-              <td>${time ?? ''}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Phone</strong></td>
-              <td>${phone ?? ''}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Email</strong></td>
-              <td>${email ?? ''}</td>
-            </tr>
-
-            <tr>
-              <td><strong>Notes</strong></td>
-              <td>${notes ?? ''}</td>
-            </tr>
-          </table>
-
-          <p>
-            Please check the admin booking system for more details.
-          </p>
-        </body>
-      </html>
-    `;
+    const html = renderBookingEmail(booking);
+    const replyTo = booking.email?.trim();
+    const subject = `New appointment request - ${booking.name || 'Client'}`;
 
     try {
-      const { data, error } = await this.resend.emails.send({
-        from: emailFrom,
-        to: [notificationEmail],
-        subject: `New Nail Booking - ${name ?? 'Customer'}`,
-        html,
-        replyTo: email || undefined,
-      });
+      let lastError: Error | undefined;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        const { data, error } = await this.resend.emails.send({
+          from: emailFrom,
+          to: [notificationEmail],
+          subject,
+          html,
+          replyTo: replyTo || undefined,
+        });
 
-      if (error) {
-        this.logger.error(
-          `RESEND EMAIL FAILED: ${JSON.stringify(error)}`,
-        );
+        if (!error) {
+          this.logger.log(`EMAIL SENT SUCCESSFULLY. Resend ID=${data?.id}`);
+          return;
+        }
 
-        throw new Error(
-          error.message || 'Resend failed to send the email',
-        );
+        lastError = new Error(error.message || 'Resend failed to send the email');
+        this.logger.warn(`Resend attempt ${attempt}/3 failed: ${lastError.message}`);
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** (attempt - 1)));
+        }
       }
 
-      this.logger.log(
-        `EMAIL SENT SUCCESSFULLY. Resend ID=${data?.id}`,
-      );
+      throw lastError || new Error('Resend failed to send the email');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : String(error);

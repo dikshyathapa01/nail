@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Lock, Mail, User, Phone, Eye, EyeOff, Sparkles, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { X, Lock, Mail, User, Phone, Eye, EyeOff, Sparkles, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../context/useAuth";
 import { validateEmail } from "../utils/emailValidator";
 
 export default function AuthModal() {
-  const { authModal, closeAuthModal, switchAuthMode, login, signup, quickDemoLogin } = useAuth();
+  const { authModal, closeAuthModal, switchAuthMode, login, signup } = useAuth();
   const { isOpen, mode, message } = authModal;
 
   const [name, setName] = useState("");
@@ -19,13 +19,19 @@ export default function AuthModal() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Reset on open/mode change
+  
   useEffect(() => {
-    if (isOpen) {
-      setError("");
-      setSuggestion("");
-      setSuccessMsg("");
-      setShowPw(false);
+    setError("");
+    setSuggestion("");
+    setSuccessMsg("");
+    setShowPw(false);
+
+    if (!isOpen) {
+      setName("");
+      setEmail("");
+      setPhone("");
+      setPassword("");
+      setConfirmPassword("");
     }
   }, [isOpen, mode]);
 
@@ -73,22 +79,9 @@ export default function AuthModal() {
       return;
     }
 
-    // Login mode
     setLoading(true);
     try {
       await login({ email, password });
-      closeAuthModal();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemo = async () => {
-    setError(""); setLoading(true);
-    try {
-      await quickDemoLogin();
       closeAuthModal();
     } catch (err) {
       setError(err.message);
@@ -242,12 +235,6 @@ export default function AuthModal() {
               </button>
             </form>
 
-            <div className="auth-divider"><span>or</span></div>
-
-            <button type="button" className="frosted-pill-btn auth-demo-btn" onClick={handleDemo} disabled={loading}>
-              <ShieldCheck size={15} />
-              <span>1-tap demo login (Sophiya Sharma)</span>
-            </button>
           </motion.div>
         </div>
       )}

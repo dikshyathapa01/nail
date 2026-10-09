@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
 import {
-  Check, ChevronRight, Sparkles, Calendar as CalendarIcon, Clock, CheckCircle2, ArrowRight, Share2,
+  Check, ChevronRight, Sparkles, Calendar as CalendarIcon, Clock, CheckCircle2, ArrowRight, Share2, Lock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingCalendar from "../components/BookingCalendar";
@@ -21,7 +21,16 @@ export default function Booking() {
   const [toast, setToast] = useState("");
   const [confirmedBooking, setConfirmedBooking] = useState(null);
 
-  const { user, setMyBookingsOpen } = useAuth();
+  const { user, isAuthenticated, openAuthModal, setMyBookingsOpen } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      openAuthModal({
+        mode: "login",
+        message: "Please sign in before choosing an appointment date and time.",
+      });
+    }
+  }, [isAuthenticated]);
 
   // Scroll directly to date choosing section
   useEffect(() => {
@@ -151,18 +160,36 @@ export default function Booking() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
-                <div className="calendar-card editorial-frosted-card">
-                  <BookingCalendar
-                    value={date}
-                    onChange={setDate}
-                    selectedTime={time}
-                    onTimeChange={setTime}
-                  />
-                  <div className="legend">
-                    <span><i className="available-dot" /> Available</span>
-                    <span><i className="booked-dot" /> Booked</span>
+                {isAuthenticated ? (
+                  <div className="calendar-card editorial-frosted-card">
+                    <BookingCalendar
+                      value={date}
+                      onChange={setDate}
+                      selectedTime={time}
+                      onTimeChange={setTime}
+                    />
+                    <div className="legend">
+                      <span><i className="available-dot" /> Available</span>
+                      <span><i className="booked-dot" /> Booked</span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="calendar-card editorial-frosted-card booking-login-gate">
+                    <Lock size={30} />
+                    <h3>Sign in to choose a date</h3>
+                    <p>Your appointment calendar will appear after you sign in.</p>
+                    <button
+                      type="button"
+                      className="dark-button"
+                      onClick={() => openAuthModal({
+                        mode: "login",
+                        message: "Please sign in before choosing an appointment date and time.",
+                      })}
+                    >
+                      Sign In <ArrowRight size={15} />
+                    </button>
+                  </div>
+                )}
               </motion.div>
 
               <motion.div

@@ -1779,10 +1779,36 @@ h2 em {
   margin: 0 0 12px;
   color: var(--color-text-sub);
   font-size: 13px;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
-.footer-grid a:hover {
+.footer-grid>div:not(:first-child) a {
+  position: relative;
+  width: fit-content;
+}
+
+.footer-grid>div:not(:first-child) a::after {
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.2s ease;
+}
+
+.footer-grid a:hover,
+.footer-grid p:hover {
   color: var(--color-ink);
+  transform: translateX(3px);
+}
+
+.footer-grid>div:not(:first-child) a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 .footer-grid p span {
@@ -1805,12 +1831,14 @@ h2 em {
   background: white;
   color: var(--color-ink);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .socials a:hover {
   background: var(--color-ink);
   color: white;
   transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
 }
 
 .footer-bottom {
@@ -1820,6 +1848,35 @@ h2 em {
   border-top: 1px solid var(--color-platinum);
   color: var(--color-text-muted);
   font-size: 11px;
+}
+
+.booking-login-gate {
+  display: flex;
+  min-height: 360px;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  text-align: center;
+  color: var(--color-text-sub);
+}
+
+.booking-login-gate svg {
+  margin-bottom: 18px;
+  color: var(--color-ink);
+}
+
+.booking-login-gate h3 {
+  margin: 0 0 8px;
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  font-size: 25px;
+}
+
+.booking-login-gate p {
+  max-width: 260px;
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 /* Micro-animations */

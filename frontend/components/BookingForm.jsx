@@ -120,8 +120,15 @@ export default function BookingForm({ date, time, onSuccess }) {
           {errors.name && <small className="form-error">{errors.name.message}</small>}
         </label>
         <label>
-          Phone
-          <input {...register("phone")} placeholder="+977 98..." />
+          Phone <span className="required-mark">*</span>
+          <input
+            {...register("phone", {
+              required: "Your phone number is required",
+              minLength: { value: 7, message: "Please enter a valid phone number" },
+            })}
+            placeholder="+977 98..."
+          />
+          {errors.phone && <small className="form-error">{errors.phone.message}</small>}
         </label>
       </div>
 

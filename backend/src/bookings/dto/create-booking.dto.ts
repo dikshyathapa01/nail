@@ -47,11 +47,11 @@ export class CreateBookingDto {
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ required: false, example: '+977 9863027467' })
-  @IsOptional()
+  @ApiProperty({ example: '+977 9863027467', minLength: 7, maxLength: 30 })
   @IsString()
+  @MinLength(7)
   @MaxLength(30)
-  phone?: string;
+  phone: string;
 
   @ApiProperty({ required: false, example: 'hello@example.com' })
   @IsOptional()

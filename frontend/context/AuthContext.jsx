@@ -4,6 +4,16 @@ import { AuthContext } from "./auth-context";
 
 const STORAGE_KEY_USER = "nail_inspo_auth_user";
 
+function readSessionUser() {
+  try {
+    // Keep the signed-in state only for the current browser tab.
+    const saved = sessionStorage.getItem(STORAGE_KEY_USER);
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function requestAuth(path, payload) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -21,11 +31,12 @@ async function requestAuth(path, payload) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY_USER);
-      return saved ? JSON.parse(saved) : null;
+      // Remove the old persistent login created by earlier versions.
+      localStorage.removeItem(STORAGE_KEY_USER);
     } catch {
-      return null;
+      // Storage can be unavailable in private browsing contexts.
     }
+    return readSessionUser();
   });
 
   // Auth modal state
@@ -55,7 +66,7 @@ export function AuthProvider({ children }) {
     const result = await requestAuth("/auth/login", { email, password });
     const sessionUser = result.user;
     setUser(sessionUser);
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
+    sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
 
     // Fire callback (e.g. complete a pending booking)
     if (authModal.onSuccess) {
@@ -71,13 +82,10 @@ export function AuthProvider({ children }) {
     return result.user;
   };
 
-  const quickDemoLogin = async () => {
-    return login({ email: "sophiya@example.com", password: "password123" });
-  };
-
   const logout = () => {
     setUser(null);
     try {
+      sessionStorage.removeItem(STORAGE_KEY_USER);
       localStorage.removeItem(STORAGE_KEY_USER);
     } catch (e) { /* */ }
   };
@@ -117,7 +125,6 @@ export function AuthProvider({ children }) {
         switchAuthMode,
         login,
         signup,
-        quickDemoLogin,
         logout,
         getUserBookings,
         saveBookingLocally,
