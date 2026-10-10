@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, Query, UseGuards, Param } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { BookingsService } from './bookings.service';
+import { AdminGuard } from '../auth/admin.guard';
+import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 
 @Controller('bookings')
 @ApiTags('bookings')
@@ -31,5 +33,19 @@ export class BookingsController {
   @ApiQuery({ name: 'email', required: false, description: 'Filter bookings by customer email' })
   list(@Query('userId') userId?: string, @Query('email') email?: string) {
     return this.bookingsService.list(userId, email);
+  }
+
+  @Get('admin')
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'List all booking requests (administrators only)' })
+  listForAdmin() {
+    return this.bookingsService.list();
+  }
+
+  @Patch('admin/:id/status')
+  @UseGuards(AdminGuard)
+  @ApiOperation({ summary: 'Update an appointment status (administrators only)' })
+  updateStatus(@Param('id') id: string, @Body() dto: UpdateBookingStatusDto) {
+    return this.bookingsService.updateStatus(id, dto.status);
   }
 }

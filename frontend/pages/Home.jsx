@@ -8,8 +8,10 @@ import InstagramIcon from "../components/InstagramIcon";
 import bookWithMe from "../assets/book with me.jpg";
 import frontNailArt from "../assets/front.jpg";
 import EditorialBackground from "../components/EditorialBackground";
+import { API_BASE_URL } from "../api";
 
 export default function Home() {
+  const [dynamicServices, setDynamicServices] = useState([]);
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -18,6 +20,13 @@ export default function Home() {
 
   const rotateX = useTransform(springY, [-0.5, 0.5], [6, -6]);
   const rotateY = useTransform(springX, [-0.5, 0.5], [-6, 6]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/services`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load services")))
+      .then((items) => { if (Array.isArray(items)) setDynamicServices(items); })
+      .catch(() => {});
+  }, []);
 
   const handleMouseMove = (e) => {
     const { clientX, clientY } = e;
@@ -131,7 +140,7 @@ export default function Home() {
           </div>
 
           <div className="service-cards">
-            {services.slice(0, 8).map((service, index) => (
+            {[...dynamicServices, ...services].slice(0, 8).map((service, index) => (
               <motion.article
                 className="service-card"
                 key={service.name}

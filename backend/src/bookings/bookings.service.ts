@@ -163,4 +163,11 @@ export class BookingsService {
     });
     return bookings.map((booking) => this.toResponse(booking));
   }
+
+  async updateStatus(id: string, status: BookingStatus) {
+    const booking = await this.bookingRepository.findOne({ where: { id }, relations: { user: true } });
+    if (!booking) throw new ConflictException('Appointment not found.');
+    booking.status = status;
+    return this.toResponse(await this.bookingRepository.save(booking));
+  }
 }

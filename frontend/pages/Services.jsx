@@ -1,19 +1,34 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Clock3, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { services, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../data";
 import InstagramIcon from "../components/InstagramIcon";
 import EditorialBackground from "../components/EditorialBackground";
-
-const categories = ["All", "Press-Ons", "Nail Art", "Gel & Extensions", "Acrylics"];
+import { API_BASE_URL } from "../api";
 
 export default function Services() {
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [categories, setCategories] = useState(["All", "Press-Ons", "Nail Art", "Gel & Extensions", "Acrylics"]);
+  const [dynamicServices, setDynamicServices] = useState([]);
 
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/categories`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load categories")))
+      .then((items) => {
+        if (Array.isArray(items) && items.length) setCategories(["All", ...items.map((item) => item.name)]);
+      })
+      .catch(() => {});
+    fetch(`${API_BASE_URL}/services`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load services")))
+      .then((items) => { if (Array.isArray(items)) setDynamicServices(items); })
+      .catch(() => {});
+  }, []);
+
+  const allServices = [...dynamicServices, ...services];
   const filteredServices = selectedCategory === "All"
-    ? services
-    : services.filter((s) => s.category === selectedCategory);
+    ? allServices
+    : allServices.filter((s) => s.category === selectedCategory);
 
   return (
     <section className="page-shell editorial-page-shell" aria-label="Services">
@@ -65,7 +80,7 @@ export default function Services() {
               className={selectedCategory === cat ? "frosted-tab active" : "frosted-tab"}
               onClick={() => setSelectedCategory(cat)}
             >
-              {cat} {cat === "All" ? `(${services.length})` : `(${services.filter(s => s.category === cat).length})`}
+              {cat} {cat === "All" ? `(${allServices.length})` : `(${allServices.filter(s => s.category === cat).length})`}
             </button>
           ))}
         </motion.div>
@@ -90,6 +105,7 @@ export default function Services() {
                   <span className="service-duration-pill">
                     <Clock3 size={13} /> {service.duration}
                   </span>
+                  {service.price !== undefined && <span className="service-duration-pill">Rs. {service.price}</span>}
                 </footer>
                 <div className="service-card-actions">
                   <Link
@@ -107,4 +123,3 @@ export default function Services() {
     </section>
   );
 }
-

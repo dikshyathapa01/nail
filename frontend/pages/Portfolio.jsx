@@ -8,13 +8,18 @@ import GalleryGrid from "../components/GalleryGrid";
 import InstagramIcon from "../components/InstagramIcon";
 import EditorialBackground from "../components/EditorialBackground";
 
-const categories = ["All", "Press-Ons", "Nail Art", "Gel & BIAB", "Chrome & French", "Acrylics"];
-
 export default function Portfolio() {
   const [filter, setFilter] = useState("All");
   const [gallery, setGallery] = useState(bundledGallery);
+  const [categories, setCategories] = useState(["All", "Press-Ons", "Nail Art", "Gel & BIAB", "Chrome & French", "Acrylics"]);
 
   useEffect(() => {
+    fetch(`${API_BASE_URL}/categories`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load categories")))
+      .then((items) => {
+        if (Array.isArray(items) && items.length) setCategories(["All", ...items.map((item) => item.name)]);
+      })
+      .catch(() => {});
     fetch(`${API_BASE_URL}/gallery`)
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load gallery")))
       .then((items) => {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from '../auth/auth.module';
 import { User } from '../auth/user.entity';
 import { NotificationsService } from '../notifications.service';
 import { Booking } from './booking.entity';
@@ -7,7 +8,7 @@ import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Booking, User])],
+  imports: [TypeOrmModule.forFeature([Booking, User]), AuthModule],
   controllers: [BookingsController],
   providers: [BookingsService, NotificationsService],
   exports: [BookingsService],

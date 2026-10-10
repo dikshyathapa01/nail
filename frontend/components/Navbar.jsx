@@ -19,6 +19,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const dropRef = useRef(null);
+  const isAdmin = Boolean(user?.isAdmin);
 
   // Close on route change
   useEffect(() => {
@@ -80,12 +81,6 @@ export default function Navbar() {
                 <span className="nav-username">{user.name.split(" ")[0]}</span>
                 <ChevronDown size={13} style={{ opacity: 0.6 }} />
               </button>
-              {user.isAdmin && (
-                <button type="button" className="nav-drop-item" onClick={() => { setDropOpen(false); navigate("/admin"); }}>
-                  <Shield size={14} /> Admin Panel
-                </button>
-              )}
-
               <AnimatePresence>
                 {dropOpen && (
                   <motion.div
@@ -100,7 +95,16 @@ export default function Navbar() {
                       <small>{user.email}</small>
                     </div>
                     <hr className="nav-drop-divider" />
-                    <button
+                    {user.isAdmin && (
+                      <button
+                        type="button"
+                        className="nav-drop-item"
+                        onClick={() => { setDropOpen(false); navigate("/admin"); }}
+                      >
+                        <Shield size={14} /> Admin Dashboard
+                      </button>
+                    )}
+                    {!user.isAdmin && <button
                       type="button"
                       className="nav-drop-item"
                       onClick={() => {
@@ -109,7 +113,7 @@ export default function Navbar() {
                       }}
                     >
                       <Calendar size={14} /> My Appointments
-                    </button>
+                    </button>}
                     <button
                       type="button"
                       className="nav-drop-item nav-drop-logout"
@@ -134,13 +138,19 @@ export default function Navbar() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={handleBookNow}
-            className="frosted-pill-btn nav-book-btn"
-          >
-            BOOK NOW
-          </button>
+          {isAdmin ? (
+            <button type="button" onClick={() => navigate("/admin")} className="frosted-pill-btn nav-book-btn">
+              ADMIN DASHBOARD
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleBookNow}
+              className="frosted-pill-btn nav-book-btn"
+            >
+              BOOK NOW
+            </button>
+          )}
         </div>
 
         {/* Mobile three-dash menu button (min 48x48 touch target) */}
@@ -181,14 +191,20 @@ export default function Navbar() {
 
             {/* Prominent BOOK NOW button that redirects directly to date choosing section */}
             <div className="mobile-nav-actions">
-              <button
-                type="button"
-                className="dark-button mobile-book-btn"
-                onClick={handleBookNow}
-              >
-                <Sparkles size={15} />
-                <span>BOOK NOW</span>
-              </button>
+              {isAdmin ? (
+                <button type="button" className="dark-button mobile-book-btn" onClick={() => { setMobileOpen(false); navigate("/admin"); }}>
+                  <Shield size={15} /><span>ADMIN DASHBOARD</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="dark-button mobile-book-btn"
+                  onClick={handleBookNow}
+                >
+                  <Sparkles size={15} />
+                  <span>BOOK NOW</span>
+                </button>
+              )}
 
               {/* Mobile Auth / Member Section */}
               {isAuthenticated ? (
@@ -206,7 +222,7 @@ export default function Navbar() {
                         <Shield size={13} /> Admin
                       </Link>
                     )}
-                    <button
+                    {!isAdminDashboard && <button
                       type="button"
                       className="frosted-pill-btn"
                       onClick={() => {
@@ -215,7 +231,7 @@ export default function Navbar() {
                       }}
                     >
                       <Calendar size={13} /> My Bookings
-                    </button>
+                    </button>}
                     <button
                       type="button"
                       className="frosted-pill-btn mobile-logout-btn"

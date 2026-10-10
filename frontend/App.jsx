@@ -27,6 +27,8 @@ export default function App() {
             <Route path="/booking" element={<Booking />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/admin/bookings" element={<Admin initialTab="appointments" />} />
+            <Route path="/admin/services" element={<Admin initialTab="services" />} />
           </Routes>
         </main>
         <Footer />
