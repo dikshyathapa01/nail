@@ -6,11 +6,24 @@ import { services, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../data";
 import InstagramIcon from "../components/InstagramIcon";
 import EditorialBackground from "../components/EditorialBackground";
 import { API_BASE_URL } from "../api";
+import { useAuth } from "../context/useAuth";
 
 export default function Services() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [categories, setCategories] = useState(["All", "Press-Ons", "Nail Art", "Gel & Extensions", "Acrylics"]);
   const [dynamicServices, setDynamicServices] = useState([]);
+  const { user, adminToken } = useAuth();
+  const isAdmin = Boolean(user?.isAdmin);
+
+  const deleteService = async (id) => {
+    if (!window.confirm("Delete this service?")) return;
+    const response = await fetch(`${API_BASE_URL}/admin/services/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    if (!response.ok) throw new Error("Unable to delete service.");
+    setDynamicServices((current) => current.filter((service) => service.id !== id));
+  };
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/categories`)
@@ -108,12 +121,18 @@ export default function Services() {
                   {service.price !== undefined && <span className="service-duration-pill">Rs. {service.price}</span>}
                 </footer>
                 <div className="service-card-actions">
-                  <Link
-                    className="explore-pill-btn service-book-btn"
-                    to={`/booking?service=${encodeURIComponent(service.name)}#booking-calendar-section`}
-                  >
-                    Book Appointment <ArrowRight size={14} style={{ marginLeft: "6px" }} />
-                  </Link>
+                  {isAdmin && service.id ? (
+                    <>
+                      <Link className="explore-pill-btn service-book-btn" to={`/admin/services?edit=${service.id}`}>Edit Service</Link>
+                      <button className="frosted-pill-btn service-book-btn" type="button" onClick={() => deleteService(service.id)}>Delete</button>
+                    </>
+                  ) : isAdmin ? (
+                    <span className="service-duration-pill">Built-in service</span>
+                  ) : (
+                    <Link className="explore-pill-btn service-book-btn" to={`/booking?service=${encodeURIComponent(service.name)}#booking-calendar-section`}>
+                      Book Appointment <ArrowRight size={14} style={{ marginLeft: "6px" }} />
+                    </Link>
+                  )}
                 </div>
               </div>
             </article>

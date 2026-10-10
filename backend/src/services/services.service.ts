@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StudioService } from './service.entity';
@@ -8,6 +8,7 @@ const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gi
 
 @Injectable()
 export class ServicesService {
+  private readonly logger = new Logger(ServicesService.name);
   constructor(@InjectRepository(StudioService) private readonly repository: Repository<StudioService>) {}
 
   private response(service: StudioService) {
@@ -23,7 +24,14 @@ export class ServicesService {
   }
 
   async list() {
-    return (await this.repository.find({ order: { createdAt: 'DESC' } })).map((service) => this.response(service));
+    try {
+      return (await this.repository.find({ order: { createdAt: 'DESC' } })).map((service) => this.response(service));
+    } catch (error) {
+      this.logger.error(`Unable to load services: ${error instanceof Error ? error.message : String(error)}`);
+      throw new ServiceUnavailableException(
+        'Services are temporarily unavailable. Restart the API with database synchronization enabled or apply the studio_services schema.',
+      );
+    }
   }
 
   async create(fields: { name: string; category: string; duration: string; description: string; price: string; imageUrl?: string }, file?: UploadedImage, id?: string) {
@@ -44,8 +52,8 @@ export class ServicesService {
       const service = await this.repository.save(this.repository.create({
         ...(existing || {}),
         name, category, duration, description, price,
-        imageData: file?.buffer.toString('base64'),
-        mimeType: file?.mimetype,
+        imageData: file ? file.buffer.toString('base64') : existing?.imageData || null,
+        mimeType: file ? file.mimetype : existing?.mimeType || null,
         imageUrl: fields.imageUrl?.trim() || existing?.imageUrl || null,
       }));
       return this.response(service);

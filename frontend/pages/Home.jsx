@@ -9,9 +9,22 @@ import bookWithMe from "../assets/book with me.jpg";
 import frontNailArt from "../assets/front.jpg";
 import EditorialBackground from "../components/EditorialBackground";
 import { API_BASE_URL } from "../api";
+import { useAuth } from "../context/useAuth";
 
 export default function Home() {
   const [dynamicServices, setDynamicServices] = useState([]);
+  const { user, adminToken } = useAuth();
+  const isAdmin = Boolean(user?.isAdmin);
+
+  const deleteService = async (id) => {
+    if (!window.confirm("Delete this service?")) return;
+    const response = await fetch(`${API_BASE_URL}/services/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
+    if (!response.ok) return;
+    setDynamicServices((current) => current.filter((service) => service.id !== id));
+  };
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -77,8 +90,8 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.85, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Link to="/booking#booking-calendar-section" className="dark-button">
-                BOOK SESSION <ArrowRight size={14} />
+              <Link to={isAdmin ? "/admin" : "/booking#booking-calendar-section"} className="dark-button">
+                {isAdmin ? "MANAGE STUDIO" : "BOOK SESSION"} <ArrowRight size={14} />
               </Link>
               <Link to="/portfolio" className="explore-pill-btn">
                 EXPLORE DESIGNS
@@ -171,12 +184,18 @@ export default function Home() {
                     </span>
                   </footer>
                   <div className="service-card-actions">
-                    <Link
-                      className="dark-button service-book-btn"
-                      to={`/booking?service=${encodeURIComponent(service.name)}#booking-calendar-section`}
-                    >
-                      Book Now <ArrowRight size={14} />
-                    </Link>
+                    {isAdmin && service.id ? (
+                      <>
+                        <Link className="dark-button service-book-btn" to={`/admin/services?edit=${service.id}`}>Edit Service</Link>
+                        <button className="frosted-pill-btn service-book-btn" type="button" onClick={() => deleteService(service.id)}>Delete</button>
+                      </>
+                    ) : isAdmin ? (
+                      <span className="service-duration-pill">Built-in service</span>
+                    ) : (
+                      <Link className="dark-button service-book-btn" to={`/booking?service=${encodeURIComponent(service.name)}#booking-calendar-section`}>
+                        Book Now <ArrowRight size={14} />
+                      </Link>
+                    )}
                   </div>
                 </div>
               </motion.article>

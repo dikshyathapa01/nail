@@ -729,6 +729,7 @@ h2 em {
 .admin-service-list small { color: var(--color-text-muted); font-size: 11px; }
 .admin-service-list button { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; color: #b91c1c; background: #fef2f2; }
 .admin-appointments { display: grid; gap: 10px; }
+.admin-appointment-toolbar { display: flex; gap: 8px; margin-bottom: 14px; }
 .admin-appointments article { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 16px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-cloud-light); }
 .admin-appointments article div { display: grid; gap: 4px; }
 .admin-appointments span, .admin-appointments small { color: var(--color-text-muted); font-size: 12px; }

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AdminGuard } from '../auth/admin.guard';
@@ -28,6 +28,16 @@ export class ServicesController {
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: 5 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
   update(
+    @Param('id') id: string,
+    @Body() fields: { name: string; category: string; duration: string; description: string; price: string; imageUrl?: string },
+    @UploadedFile() file?: UploadedImage,
+  ) { return this.servicesService.create(fields, file, id); }
+
+  @Put(':id')
+  @UseGuards(AdminGuard)
+  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: 5 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  updateWithPut(
     @Param('id') id: string,
     @Body() fields: { name: string; category: string; duration: string; description: string; price: string; imageUrl?: string },
     @UploadedFile() file?: UploadedImage,

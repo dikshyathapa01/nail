@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, CalendarDays, ImagePlus, Plus, Trash2, Upload, ShieldCheck, Scissors } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "../api";
 import { useAuth } from "../context/useAuth";
 
@@ -9,6 +10,8 @@ const fallbackCategories = ["Press-Ons", "Nail Art", "Gel & BIAB", "Chrome & Fre
 export default function Admin({ initialTab = "overview" }) {
   const { user, adminToken, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit");
   const [tab, setTab] = useState(initialTab);
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -25,27 +28,53 @@ export default function Admin({ initialTab = "overview" }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [appointmentView, setAppointmentView] = useState("today");
+  const [serviceLoadError, setServiceLoadError] = useState("");
 
-  const adminHeaders = { Authorization: `Bearer ${adminToken}` };
+  const adminHeaders = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
   const loadData = async () => {
+    if (!adminToken) throw new Error("Your admin session has expired. Please sign in again.");
     const [galleryResponse, categoryResponse, appointmentResponse, servicesResponse] = await Promise.all([
       fetch(`${API_BASE_URL}/gallery`),
       fetch(`${API_BASE_URL}/categories`),
       fetch(`${API_BASE_URL}/bookings/admin`, { headers: adminHeaders }),
       fetch(`${API_BASE_URL}/services`),
     ]);
-    if (!galleryResponse.ok || !categoryResponse.ok || !appointmentResponse.ok || !servicesResponse.ok) {
-      throw new Error("Unable to load the admin dashboard.");
+    const failedResponse = [
+      ["photos", galleryResponse],
+      ["categories", categoryResponse],
+      ["appointments", appointmentResponse],
+    ].find(([, response]) => !response.ok);
+    if (failedResponse) {
+      const [resource, response] = failedResponse;
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) throw new Error("Your admin session has expired. Please sign in again.");
+      throw new Error(result.message || `Unable to load ${resource}.`);
     }
-    const [galleryItems, categoryItems, bookingItems, serviceItems] = await Promise.all([
-      galleryResponse.json(), categoryResponse.json(), appointmentResponse.json(), servicesResponse.json(),
+    const [galleryItems, categoryItems, bookingItems] = await Promise.all([
+      galleryResponse.json(), categoryResponse.json(), appointmentResponse.json(),
     ]);
+    const serviceItems = servicesResponse.ok ? await servicesResponse.json() : [];
+    setServiceLoadError(servicesResponse.ok ? "" : `Services API is unavailable (${servicesResponse.status}). Redeploy the backend to enable service management.`);
     setItems(galleryItems);
     const names = categoryItems.map((item) => item.name);
     setCategories(names.length ? categoryItems : fallbackCategories.map((name) => ({ id: null, name })));
     setCategory((current) => current || names[0] || fallbackCategories[0]);
     setAppointments(bookingItems);
     setServices(serviceItems);
+    const serviceToEdit = editId && serviceItems.find((item) => item.id === editId);
+    if (serviceToEdit) {
+      setEditingServiceId(serviceToEdit.id);
+      setServiceForm({
+        name: serviceToEdit.name,
+        duration: serviceToEdit.duration,
+        description: serviceToEdit.description,
+        price: String(serviceToEdit.price),
+      });
+      setCategory(serviceToEdit.category);
+      setServiceImageUrl(serviceToEdit.image?.startsWith("http") ? serviceToEdit.image : "");
+      setTab("services");
+    }
   };
 
   useEffect(() => {
@@ -55,7 +84,7 @@ export default function Admin({ initialTab = "overview" }) {
       loadData().catch(() => {});
     }, 30000);
     return () => window.clearInterval(refreshTimer);
-  }, [isAuthenticated, user?.isAdmin]);
+  }, [isAuthenticated, user?.isAdmin, adminToken, editId]);
 
   if (!isAuthenticated || !user?.isAdmin) {
     return (
@@ -69,6 +98,11 @@ export default function Admin({ initialTab = "overview" }) {
       </section>
     );
   }
+
+  const retryLoad = () => {
+    setError("");
+    loadData().catch((loadError) => setError(loadError.message));
+  };
 
   const run = async (action, success) => {
     setError(""); setMessage(""); setLoading(true);
@@ -111,7 +145,7 @@ export default function Admin({ initialTab = "overview" }) {
     Object.entries({ ...serviceForm, category, imageUrl: serviceImageUrl }).forEach(([key, value]) => formData.append(key, value));
     if (serviceFile) formData.append("image", serviceFile);
     return run(async () => {
-      const response = await fetch(`${API_BASE_URL}/services${editingServiceId ? `/${editingServiceId}` : ""}`, { method: editingServiceId ? "PATCH" : "POST", headers: adminHeaders, body: formData });
+      const response = await fetch(`${API_BASE_URL}/admin/services${editingServiceId ? `/${editingServiceId}` : ""}`, { method: editingServiceId ? "PUT" : "POST", headers: adminHeaders, body: formData });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "Could not add service.");
       setServiceForm({ name: "", duration: "", description: "", price: "" });
@@ -147,6 +181,11 @@ export default function Admin({ initialTab = "overview" }) {
   }, success);
 
   const pendingCount = appointments.filter((appointment) => appointment.status === "pending").length;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const visibleAppointments = appointmentView === "today"
+    ? appointments.filter((appointment) => String(appointment.date || appointment.booking_date || "").slice(0, 10) === today)
+    : appointments;
   return (
     <section className="page-shell editorial-page-shell">
       <div className="shell admin-dashboard">
@@ -165,7 +204,9 @@ export default function Admin({ initialTab = "overview" }) {
             </button>
           ))}
         </div>
-        {(error || message) && <p className={error ? "admin-feedback error" : "admin-feedback"}>{error || message}</p>}
+        {error && <div className="admin-feedback error"><span>{error}</span><button type="button" className="frosted-pill-btn" onClick={retryLoad}>Retry</button></div>}
+        {message && <p className="admin-feedback">{message}</p>}
+        {serviceLoadError && tab === "services" && <p className="admin-feedback error">{serviceLoadError}</p>}
 
         {(tab === "overview" || tab === "gallery") && (
           <div className="admin-section-grid">
@@ -193,7 +234,7 @@ export default function Admin({ initialTab = "overview" }) {
               <textarea placeholder="Description" value={serviceForm.description} onChange={(event) => setServiceForm({ ...serviceForm, description: event.target.value })} required />
               <input placeholder="Image URL (optional)" value={serviceImageUrl} onChange={(event) => { setServiceImageUrl(event.target.value); setServiceForm({ ...serviceForm, imageUrl: event.target.value }); }} />
               <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setServiceFile(event.target.files?.[0] || null)} />
-              <button className="dark-button" disabled={loading}><Plus size={15} /> Add service</button>
+              <button className="dark-button" disabled={loading}><Plus size={15} /> {editingServiceId ? "Update service" : "Add service"}</button>
             </form>
             <div className="admin-service-list">{services.map((item) => <div key={item.id}><div><strong>{item.name}</strong><small>{item.category} · {item.duration} · {item.price}</small></div><span><button type="button" onClick={() => editService(item)}>Edit</button><button type="button" onClick={() => remove(`${API_BASE_URL}/services/${item.id}`, "Service removed.")}><Trash2 size={15} /></button></span></div>)}</div>
             <div className="admin-card-heading" style={{ marginTop: "30px" }}><Plus size={20} /><div><h2>Service categories</h2><p>These categories appear on the public services and portfolio pages.</p></div></div>
@@ -205,7 +246,8 @@ export default function Admin({ initialTab = "overview" }) {
         {(tab === "overview" || tab === "appointments") && (
           <section className="admin-management-card editorial-frosted-card">
             <div className="admin-card-heading"><CalendarDays size={20} /><div><h2>Appointment requests</h2><p>New requests are also sent to the configured studio notification email.</p></div></div>
-            <div className="admin-appointments">{appointments.length === 0 ? <p>No appointment requests yet.</p> : appointments.map((appointment) => <article key={appointment.id}><div><strong>{appointment.name}</strong><span>{appointment.phone || "No phone"} · {appointment.email || "No email"}</span><span>{appointment.service} · {appointment.date} at {appointment.time}</span><small>{appointment.notes || "No notes"}</small></div><div className="admin-appointment-actions"><b className={`status-${appointment.status}`}>{appointment.status}</b><select value={appointment.status} onChange={(event) => updateBookingStatus(appointment.id, event.target.value)}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div></article>)}</div>
+            <div className="admin-appointment-toolbar"><button type="button" className={appointmentView === "today" ? "frosted-tab active" : "frosted-tab"} onClick={() => setAppointmentView("today")}>Today</button><button type="button" className={appointmentView === "all" ? "frosted-tab active" : "frosted-tab"} onClick={() => setAppointmentView("all")}>All appointments</button></div>
+            <div className="admin-appointments">{visibleAppointments.length === 0 ? <p>{appointmentView === "today" ? "No appointments scheduled for today." : "No appointment requests yet."}</p> : visibleAppointments.map((appointment) => <article key={appointment.id}><div><strong>{appointment.name}</strong><span>{appointment.phone || "No phone"} · {appointment.email || "No email"}</span><span>{appointment.service} · {appointment.date || appointment.booking_date} at {appointment.time}</span><small>{appointment.notes || "No notes"}</small></div><div className="admin-appointment-actions"><b className={`status-${appointment.status}`}>{appointment.status}</b><select value={appointment.status} onChange={(event) => updateBookingStatus(appointment.id, event.target.value)}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div></article>)}</div>
           </section>
         )}
       </div>
