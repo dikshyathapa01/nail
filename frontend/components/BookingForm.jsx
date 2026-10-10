@@ -120,7 +120,7 @@ export default function BookingForm({ date, time, onSuccess }) {
           {errors.name && <small className="form-error">{errors.name.message}</small>}
         </label>
         <label>
-          Phone <span className="required-mark">*</span>
+          Phone
           <input
             {...register("phone", {
               required: "Your phone number is required",
@@ -160,7 +160,7 @@ export default function BookingForm({ date, time, onSuccess }) {
       </label>
 
       <label>
-        Custom Notes / Nail Shape &amp; Inspo (Optional)
+        Custom Notes / Nail Shape &amp; Inspo
         <textarea
           rows={2}
           {...register("notes")}
@@ -186,11 +186,11 @@ export default function BookingForm({ date, time, onSuccess }) {
         disabled={!date || !time || isSubmitting}
       >
         {isSubmitting
-          ? "Sending request..."
+          ? <><span className="button-spinner" aria-hidden="true" /> Sending request...</>
           : isAuthenticated
           ? "Confirm Studio Appointment"
           : "Continue & Sign In to Confirm"}{" "}
-        <ArrowRight size={16} />
+        {!isSubmitting && <ArrowRight size={16} />}
       </button>
 
       {submitError && (

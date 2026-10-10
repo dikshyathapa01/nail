@@ -231,7 +231,13 @@ export default function AuthModal() {
               )}
 
               <button type="submit" className="dark-button auth-submit-btn" disabled={loading}>
-                {loading ? "Please wait..." : mode === "login" ? (<><span>Sign In</span><ArrowRight size={15} /></>) : (<><span>Create Account</span><ArrowRight size={15} /></>)}
+                {loading ? (
+                  <><span className="button-spinner" aria-hidden="true" /> <span>Submitting</span></>
+                ) : mode === "login" ? (
+                  <><span>Sign In</span><ArrowRight size={15} /></>
+                ) : (
+                  <><span>Create Account</span><ArrowRight size={15} /></>
+                )}
               </button>
             </form>
 

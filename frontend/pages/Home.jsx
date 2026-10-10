@@ -203,7 +203,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <GalleryGrid items={gallery.slice(0, 6)} />
+        <GalleryGrid items={gallery.slice(0, 6)} marquee />
       </section>
 
       {/* Why Choose Us */}
