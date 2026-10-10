@@ -3,12 +3,9 @@ import front from "./assets/front.jpg";
 import newNails from "./assets/nail3.jpg";
 import bookWithMe from "./assets/book with me.jpg";
 import biabNude from "./assets/nnn.jpg";
-import nnMarble from "./assets/nnn.jpg";
 import nnGlitterAcrylic from "./assets/nn.jpg";
 import nnPorcelainFloral from "./assets/nn.jpeg";
-import nnButterfly from "./assets/nn.jpeg";
 import nailBlueberry from "./assets/nail2.jpg";
-import nailHeartSwirl from "./assets/nail3.jpg";
 import nailCherryBlossom from "./assets/nail7.jpg";
 import nailsPlant from "./assets/nails.jpg";
 import waChromeFloral from "./assets/WhatsApp Image 2026-09-12 at 5.21.54 PM.jpeg";
@@ -108,8 +105,6 @@ export const gallery = [
   { image: nnPorcelainFloral, title: "3D Porcelain Florals & Dots", category: "Nail Art" },
   { image: nailCherryBlossom, title: "Sculpted Blossom & Chrome", category: "Nail Art" },
   { image: nailBlueberry, title: "Vintage Blueberry French", category: "Chrome & French" },
-  { image: nailHeartSwirl, title: "Crimson Stiletto Hearts", category: "Nail Art" },
-  { image: nnButterfly, title: "Berry Butterfly Wing Tips", category: "Chrome & French" },
   { image: nailsPlant, title: "Wavy Ribbon Editorial", category: "Nail Art" },
   { image: bookWithMe, title: "Studio Editorial Set", category: "Press-Ons" },
   

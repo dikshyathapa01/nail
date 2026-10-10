@@ -1114,10 +1114,24 @@ h2 em {
 
 /* Gallery Grid */
 .gallery-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-auto-rows: 210px;
+  align-items: stretch;
   gap: 16px;
+}
+
+.portfolio-gallery-grid {
+  grid-auto-rows: 300px;
+}
+
+.portfolio-gallery-grid .gallery-item,
+.portfolio-gallery-grid .gallery-item-0,
+.portfolio-gallery-grid .gallery-item-3,
+.portfolio-gallery-grid .gallery-item-4 {
+  grid-column: auto;
+  grid-row: auto;
 }
 
 .gallery-marquee {
@@ -1154,6 +1168,8 @@ h2 em {
 
 .gallery-item {
   position: relative;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   min-width: 0;
   padding: 0;
@@ -1167,6 +1183,7 @@ h2 em {
 .gallery-item img {
   width: 100%;
   height: 100%;
+  min-height: 0;
   object-fit: cover;
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1376,6 +1393,8 @@ h2 em {
 
 /* Portfolio CTA Card */
 .portfolio-cta-card {
+  position: relative;
+  z-index: 2;
   margin-top: 60px;
   padding: 44px;
   background: linear-gradient(135deg, #ffffff 0%, var(--color-cloud) 100%);
@@ -2089,6 +2108,10 @@ h2 em {
   .gallery-grid {
     grid-auto-rows: 160px;
   }
+
+  .portfolio-gallery-grid {
+    grid-auto-rows: 240px;
+  }
 }
 
 @media (max-width: 540px) {
@@ -2184,6 +2207,10 @@ h2 em {
   .gallery-item-0,
   .gallery-item-4 {
     grid-column: span 1;
+  }
+
+  .portfolio-gallery-grid {
+    grid-auto-rows: 220px;
   }
 
   .field-grid {
@@ -2798,6 +2825,10 @@ button,
   .gallery-item-4 {
     grid-column: auto;
     grid-row: span 1;
+  }
+
+  .portfolio-gallery-grid {
+    grid-auto-rows: 260px;
   }
 
   .gallery-overlay {

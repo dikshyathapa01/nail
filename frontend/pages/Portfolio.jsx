@@ -98,7 +98,7 @@ export default function Portfolio() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.25, ease: "easeOut" }}
         >
-          <GalleryGrid items={items} />
+          <GalleryGrid items={items} portfolio />
         </motion.div>
 
         <motion.div
