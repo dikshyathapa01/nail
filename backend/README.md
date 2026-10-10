@@ -26,6 +26,32 @@ EMAIL_FROM=bookings@mail.example.com
 NOTIFICATION_EMAIL=owner@example.com
 ```
 
+### Portfolio administration
+
+The portfolio is stored in PostgreSQL so administrators can add photos from the
+`/admin` page without rebuilding the frontend. Set the administrator email
+allowlist and a private signing secret in the API environment:
+
+```dotenv
+ADMIN_SETUP_KEY=use-a-one-time-private-setup-key
+AUTH_TOKEN_SECRET=use-a-long-random-secret
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+CLOUDINARY_FOLDER=nail-inspo/gallery
+```
+
+Create the first administrator with `POST /api/auth/admin/create`, sending the
+setup key in the `x-admin-setup-key` header. Administrators sign in through
+`POST /api/auth/admin/login` (or the normal login form), then open **Admin
+Panel** from the account menu. Uploaded JPG, PNG, WEBP, and GIF images are
+limited to 5 MB. Keep `AUTH_TOKEN_SECRET` stable when deploying so active
+administrator sessions remain valid.
+
+Portfolio images are uploaded to Cloudinary and only their secure URL and
+Cloudinary public ID are stored in PostgreSQL. Create the credentials in the
+Cloudinary dashboard and keep the API secret only in the backend environment.
+
 Use a sender on a domain you own. Do not use `onboarding@resend.dev` in production. `EMAIL_FROM` must match the domain verified in Resend, while `Reply-To` is set to the client's validated email address.
 
 ### DNS and inbox placement
@@ -40,7 +66,8 @@ DNS values vary by provider and domain, so the Resend dashboard is authoritative
 
 ## Database configuration
 
-TypeORM owns the PostgreSQL connection and repositories for `User` and `Booking`.
+TypeORM owns the PostgreSQL connection and repositories for `User`, `Booking`,
+and `GalleryItem`.
 
 For disposable local development, add this to `backend/.env`:
 
@@ -52,4 +79,3 @@ TYPEORM_SYNCHRONIZE=true
 `TYPEORM_SYNCHRONIZE=true` lets TypeORM create or update tables from the entities. Never enable it for production data.
 
 For production, set `TYPEORM_SYNCHRONIZE=false` and apply reviewed TypeORM migrations before deploying entity changes. Keep database credentials and API keys in the deployment environment, not in source control.
-

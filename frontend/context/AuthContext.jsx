@@ -64,9 +64,11 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     const result = await requestAuth("/auth/login", { email, password });
-    const sessionUser = result.user;
+    const sessionUser = { ...result.user, adminToken: result.adminToken || "" };
     setUser(sessionUser);
-    sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
+    sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
+      ...sessionUser,
+    }));
 
     // Fire callback (e.g. complete a pending booking)
     if (authModal.onSuccess) {
@@ -118,6 +120,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        adminToken: user?.adminToken || "",
         isAuthenticated: !!user,
         authModal,
         openAuthModal,
@@ -136,4 +139,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-

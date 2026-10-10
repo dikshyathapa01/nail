@@ -681,6 +681,32 @@ h2 em {
   border-color: rgba(255, 255, 255, 1) !important;
 }
 
+.admin-page { padding-top: 56px; padding-bottom: 100px; }
+.admin-upload-card { max-width: 720px; padding: 28px; margin: 28px 0 56px; }
+.admin-card-heading { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 22px; }
+.admin-card-heading svg { margin-top: 3px; }
+.admin-card-heading h2, .admin-saved h2 { margin: 0; font-family: var(--font-serif); font-size: 30px; }
+.admin-card-heading p { margin: 4px 0 0; font-size: 12px; color: var(--color-text-muted); }
+.admin-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.admin-upload-card label { display: flex; flex-direction: column; gap: 6px; color: var(--color-text-sub); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.admin-upload-card input, .admin-upload-card select { min-height: 46px; padding: 10px 12px; border: 1px solid var(--color-platinum); border-radius: var(--radius-md); background: var(--color-cloud-light); color: var(--color-ink); text-transform: none; font-size: 14px; }
+.admin-file-field { margin-top: 16px; }
+.admin-feedback { font-size: 13px; color: #166534; margin: 14px 0; }
+.admin-feedback.error { color: #b91c1c; }
+.admin-saved h2 { display: flex; align-items: center; gap: 8px; }
+.admin-saved h2 span { font-family: var(--font-sans); font-size: 12px; padding: 4px 9px; border-radius: var(--radius-pill); background: var(--color-cloud); }
+.admin-photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 18px; }
+.admin-photo-card { overflow: hidden; border: 1px solid var(--color-platinum); border-radius: var(--radius-lg); background: white; box-shadow: var(--shadow-soft); }
+.admin-photo-card img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.admin-photo-card > div { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 12px; }
+.admin-photo-card strong { font-size: 12px; padding-right: 28px; }
+.admin-photo-card small { color: var(--color-text-muted); font-size: 11px; }
+.admin-photo-card button { position: absolute; top: 9px; right: 9px; display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; background: #fef2f2; color: #b91c1c; }
+.admin-locked { max-width: 560px; margin: 100px auto; padding: 44px; text-align: center; }
+.admin-locked h1 { font-family: var(--font-serif); font-size: 38px; margin: 14px 0 6px; }
+.admin-locked p { color: var(--color-text-muted); margin: 0 0 24px; }
+@media (max-width: 700px) { .admin-form-grid, .admin-photo-grid { grid-template-columns: 1fr 1fr; } .admin-upload-card { padding: 20px; } }
+
 /* Booking Steps Bar */
 .frosted-steps-bar {
   background: rgba(255, 255, 255, 0.85);

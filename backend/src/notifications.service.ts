@@ -34,7 +34,7 @@ export class NotificationsService {
     }
 
     const notificationEmail =
-      process.env.NOTIFICATION_EMAIL || 'dikshyathapa987@gmail.com';
+      process.env.NOTIFICATION_EMAIL || 'nailinspo.72@gmail.com';
 
     const emailFrom = process.env.EMAIL_FROM?.trim();
 

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { gallery, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../data";
+import { gallery as bundledGallery, INSTAGRAM_URL, INSTAGRAM_HANDLE } from "../data";
+import { API_BASE_URL } from "../api";
 import GalleryGrid from "../components/GalleryGrid";
 import InstagramIcon from "../components/InstagramIcon";
 import EditorialBackground from "../components/EditorialBackground";
@@ -11,6 +12,20 @@ const categories = ["All", "Press-Ons", "Nail Art", "Gel & BIAB", "Chrome & Fren
 
 export default function Portfolio() {
   const [filter, setFilter] = useState("All");
+  const [gallery, setGallery] = useState(bundledGallery);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/gallery`)
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("Unable to load gallery")))
+      .then((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setGallery([...items, ...bundledGallery]);
+        }
+      })
+      .catch(() => {
+        // The bundled gallery remains available when the API is offline.
+      });
+  }, []);
 
   const items = filter === "All"
     ? gallery
@@ -108,4 +123,3 @@ export default function Portfolio() {
     </section>
   );
 }
-

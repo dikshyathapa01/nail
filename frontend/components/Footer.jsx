@@ -45,7 +45,7 @@ export default function Footer() {
       </div>
 
       <div className="shell footer-bottom">
-        <span>© {new Date().getFullYear()} Nail Inspo.np — All rights reserved.</span>
+        <span>© {new Date().getFullYear()} nailinspostudio.com — All rights reserved.</span>
         <span>Handcrafted nail artistry & reusable press-ons.</span>
       </div>
     </footer>

@@ -6,6 +6,9 @@ import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
 import { Booking } from './bookings/booking.entity';
 import { BookingsModule } from './bookings/bookings.module';
+import { GalleryModule } from './gallery/gallery.module';
+import { GalleryItem } from './gallery/gallery.entity';
+import { Admin } from './auth/admin.entity';
 
 config({ path: join(__dirname, '..', '.env') });
 
@@ -13,13 +16,14 @@ config({ path: join(__dirname, '..', '.env') });
   imports: [
     AuthModule,
     BookingsModule,
+    GalleryModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, Booking],
+      entities: [User, Admin, Booking, GalleryItem],
       autoLoadEntities: true,
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
     }),

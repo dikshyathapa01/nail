@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { CreateAdminDto } from './dto/create-admin.dto';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -30,6 +31,18 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid email or password.' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('admin/create')
+  @ApiOperation({ summary: 'Create an administrator using the private setup key' })
+  createAdmin(@Body() dto: CreateAdminDto, @Headers('x-admin-setup-key') setupKey?: string) {
+    return this.authService.createAdmin(dto, setupKey);
+  }
+
+  @Post('admin/login')
+  @ApiOperation({ summary: 'Authenticate an administrator' })
+  loginAdmin(@Body() dto: LoginDto) {
+    return this.authService.loginAdmin(dto);
   }
 
   @Get('users')

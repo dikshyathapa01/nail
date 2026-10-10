@@ -11,6 +11,7 @@ import { AuthProvider } from "./context/AuthContext";
 import AuthModal from "./components/AuthModal";
 import MyBookingsModal from "./components/MyBookingsModal";
 import ScrollToTop from "./components/ScrollToTop";
+import Admin from "./pages/Admin";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/booking" element={<Booking />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
         </main>
         <Footer />

@@ -1,4 +1,4 @@
-import { Menu, X, Sparkles, User, LogOut, Calendar, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, X, Sparkles, User, LogOut, Calendar, ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,6 +80,11 @@ export default function Navbar() {
                 <span className="nav-username">{user.name.split(" ")[0]}</span>
                 <ChevronDown size={13} style={{ opacity: 0.6 }} />
               </button>
+              {user.isAdmin && (
+                <button type="button" className="nav-drop-item" onClick={() => { setDropOpen(false); navigate("/admin"); }}>
+                  <Shield size={14} /> Admin Panel
+                </button>
+              )}
 
               <AnimatePresence>
                 {dropOpen && (
@@ -196,6 +201,11 @@ export default function Navbar() {
                     </div>
                   </div>
                   <div className="mobile-user-btn-row">
+                    {user.isAdmin && (
+                      <Link className="frosted-pill-btn" to="/admin" onClick={() => setMobileOpen(false)}>
+                        <Shield size={13} /> Admin
+                      </Link>
+                    )}
                     <button
                       type="button"
                       className="frosted-pill-btn"

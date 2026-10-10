@@ -20,7 +20,7 @@ import waSwirlAlmond from "./assets/WhatsApp Image 2026-09-12 at 5.21.57 PM.jpeg
 export const INSTAGRAM_HANDLE = "@nailinspo412";
 export const INSTAGRAM_URL = "https://www.instagram.com/nailinspo412";
 export const STUDIO_PHONE = "+977 9863027467";
-export const STUDIO_EMAIL = "dikshyathapa987@gmail.com";
+export const STUDIO_EMAIL = "nailinspo.72@gmail.com";
 export const STUDIO_LOCATION = "Kathmandu, Nepal";
 
 export const services = [

@@ -2,31 +2,31 @@ import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-valid
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SignupDto {
-  @ApiProperty({ example: 'Sophiya Sharma', minLength: 2, maxLength: 100 })
+  @ApiProperty({ minLength: 2, maxLength: 100 })
   @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ required: false, example: 'Sophiya' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   @MaxLength(80)
   firstName?: string;
 
-  @ApiProperty({ required: false, example: 'Sharma' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   @MaxLength(80)
   lastName?: string;
 
-  @ApiProperty({ example: 'sophiya@gmail.com', maxLength: 160 })
+  @ApiProperty({ maxLength: 160 })
   @IsEmail()
   @MaxLength(160)
   email: string;
 
-  @ApiProperty({ required: false, example: '+977 9841234567' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   @MaxLength(30)
