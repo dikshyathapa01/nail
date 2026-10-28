@@ -30,6 +30,9 @@ export default function Admin({ initialTab = "overview" }) {
   const [loading, setLoading] = useState(false);
   const [appointmentView, setAppointmentView] = useState("today");
   const [serviceLoadError, setServiceLoadError] = useState("");
+  const [availabilityBlocks, setAvailabilityBlocks] = useState([]);
+  const [availabilityDate, setAvailabilityDate] = useState("");
+  const [availabilityTime, setAvailabilityTime] = useState("FULL_DAY");
 
   const adminHeaders = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
   const loadData = async () => {
@@ -55,6 +58,8 @@ export default function Admin({ initialTab = "overview" }) {
       galleryResponse.json(), categoryResponse.json(), appointmentResponse.json(),
     ]);
     const serviceItems = servicesResponse.ok ? await servicesResponse.json() : [];
+    const availabilityResponse = await fetch(`${API_BASE_URL}/bookings/admin/availability-blocks`, { headers: adminHeaders });
+    const availabilityItems = availabilityResponse.ok ? await availabilityResponse.json() : [];
     setServiceLoadError(servicesResponse.ok ? "" : `Services API is unavailable (${servicesResponse.status}). Redeploy the backend to enable service management.`);
     setItems(galleryItems);
     const names = categoryItems.map((item) => item.name);
@@ -62,6 +67,7 @@ export default function Admin({ initialTab = "overview" }) {
     setCategory((current) => current || names[0] || fallbackCategories[0]);
     setAppointments(bookingItems);
     setServices(serviceItems);
+    setAvailabilityBlocks(availabilityItems);
     const serviceToEdit = editId && serviceItems.find((item) => item.id === editId);
     if (serviceToEdit) {
       setEditingServiceId(serviceToEdit.id);
@@ -166,6 +172,21 @@ export default function Admin({ initialTab = "overview" }) {
     if (!response.ok) throw new Error(result.message || "Could not update appointment.");
   }, "Appointment status updated.");
 
+  const addAvailabilityBlock = (event) => {
+    event.preventDefault();
+    return run(async () => {
+      if (!availabilityDate) throw new Error("Choose a date to block.");
+      const response = await fetch(`${API_BASE_URL}/bookings/admin/availability-blocks`, {
+        method: "POST",
+        headers: { ...adminHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ date: availabilityDate, time: availabilityTime }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || "Could not block availability.");
+      setAvailabilityDate("");
+    }, "Availability updated.");
+  };
+
   const editService = (service) => {
     setTab("services");
     setEditingServiceId(service.id);
@@ -248,6 +269,28 @@ export default function Admin({ initialTab = "overview" }) {
             <div className="admin-card-heading"><CalendarDays size={20} /><div><h2>Appointment requests</h2><p>New requests are also sent to the configured studio notification email.</p></div></div>
             <div className="admin-appointment-toolbar"><button type="button" className={appointmentView === "today" ? "frosted-tab active" : "frosted-tab"} onClick={() => setAppointmentView("today")}>Today</button><button type="button" className={appointmentView === "all" ? "frosted-tab active" : "frosted-tab"} onClick={() => setAppointmentView("all")}>All appointments</button></div>
             <div className="admin-appointments">{visibleAppointments.length === 0 ? <p>{appointmentView === "today" ? "No appointments scheduled for today." : "No appointment requests yet."}</p> : visibleAppointments.map((appointment) => <article key={appointment.id}><div><strong>{appointment.name}</strong><span>{appointment.phone || "No phone"} · {appointment.email || "No email"}</span><span>{appointment.service} · {appointment.date || appointment.booking_date} at {appointment.time}</span><small>{appointment.notes || "No notes"}</small></div><div className="admin-appointment-actions"><b className={`status-${appointment.status}`}>{appointment.status}</b><select value={appointment.status} onChange={(event) => updateBookingStatus(appointment.id, event.target.value)}><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div></article>)}</div>
+            <div className="admin-availability">
+              <div className="admin-card-heading"><CalendarDays size={20} /><div><h2>Block availability</h2><p>Prevent bookings for a full day or one time slot.</p></div></div>
+              <form className="admin-inline-form" onSubmit={addAvailabilityBlock}>
+                <input type="date" value={availabilityDate} onChange={(event) => setAvailabilityDate(event.target.value)} required />
+                <select value={availabilityTime} onChange={(event) => setAvailabilityTime(event.target.value)}>
+                  <option value="FULL_DAY">Full day</option>
+                  <option value="09:00 - 10:30">09:00 - 10:30</option>
+                  <option value="11:00 - 12:30">11:00 - 12:30</option>
+                  <option value="13:30 - 15:00">13:30 - 15:00</option>
+                  <option value="15:30 - 17:00">15:30 - 17:00</option>
+                </select>
+                <button className="dark-button" disabled={loading}>Block</button>
+              </form>
+              <div className="admin-block-list">
+                {availabilityBlocks.length === 0 ? <p>No blocked dates or time slots.</p> : availabilityBlocks.map((block) => (
+                  <div key={block.id}>
+                    <span><strong>{block.date}</strong> · {block.time === "FULL_DAY" ? "Full day" : block.time}</span>
+                    <button type="button" onClick={() => remove(`${API_BASE_URL}/bookings/admin/availability-blocks/${block.id}`, "Availability block removed.")}><Trash2 size={15} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
         )}
       </div>

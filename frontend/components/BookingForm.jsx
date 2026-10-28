@@ -46,6 +46,21 @@ export default function BookingForm({ date, time, onSuccess }) {
 
   const doSubmit = async (values) => {
     setSubmitError("");
+
+    const minimumDate = new Date();
+    minimumDate.setHours(0, 0, 0, 0);
+    minimumDate.setDate(minimumDate.getDate() + 1);
+    const minimumDateValue = [
+      minimumDate.getFullYear(),
+      String(minimumDate.getMonth() + 1).padStart(2, "0"),
+      String(minimumDate.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    if (!date || date < minimumDateValue) {
+      setSubmitError("Please choose an appointment date from tomorrow onward.");
+      return;
+    }
+
     const payload = { ...values, date, time, userId: user?.id };
 
     try {
@@ -64,9 +79,14 @@ export default function BookingForm({ date, time, onSuccess }) {
       }
 
       const result = await res.json().catch(() => ({}));
-      if (res.status === 503) throw new Error("Backend offline");
-      throw new Error(result.message || "Unable to confirm booking.");
+      setSubmitError(result.message || "Unable to confirm booking.");
+      return;
     } catch (error) {
+      if (!(error instanceof TypeError)) {
+        setSubmitError(error instanceof Error ? error.message : "Unable to confirm booking.");
+        return;
+      }
+
       // Graceful offline fallback
       const saved = saveBookingLocally({
         id: Date.now(),

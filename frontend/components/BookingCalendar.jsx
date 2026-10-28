@@ -50,19 +50,26 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
 
   const chooseDay = (day) => {
     const date = new Date(year, monthIndex, day);
-    if (isPastDate(date)) return;
+    if (isUnavailableDate(date)) return;
     onChange(formatDate(date));
     onTimeChange("");
   };
 
-  const isPastDate = (date) => {
+  const getMinimumBookingDate = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return date < today;
+    today.setDate(today.getDate() + 1);
+    return today;
   };
 
-  const isPastMonth = year < new Date().getFullYear()
-    || (year === new Date().getFullYear() && monthIndex < new Date().getMonth());
+  const isUnavailableDate = (date) => {
+    const minimumDate = getMinimumBookingDate();
+    return date < minimumDate;
+  };
+
+  const minimumBookingDate = getMinimumBookingDate();
+  const isPastMonth = year < minimumBookingDate.getFullYear()
+    || (year === minimumBookingDate.getFullYear() && monthIndex < minimumBookingDate.getMonth());
 
   return (
     <div className="calendar-card">
@@ -87,12 +94,13 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
           <span key={`empty-${index}`} />
         ))}
         {Array.from({ length: days }, (_, index) => index + 1).map((day) => {
-          const date = formatDate(new Date(year, monthIndex, day));
+          const dateValue = formatDate(new Date(year, monthIndex, day));
+          const unavailable = isUnavailableDate(new Date(year, monthIndex, day));
           return (
             <button
-              key={date}
-              disabled={isPastDate(new Date(year, monthIndex, day))}
-              className={`${value === date ? "selected" : ""} ${isPastDate(new Date(year, monthIndex, day)) ? "past" : ""}`}
+              key={dateValue}
+              disabled={unavailable}
+              className={`${value === dateValue ? "selected" : ""} ${unavailable ? "past" : ""}`}
               onClick={() => chooseDay(day)}
             >
               {day}

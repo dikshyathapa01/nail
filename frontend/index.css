@@ -2153,6 +2153,27 @@ h2 em {
     text-align: center;
   }
 
+  .portfolio-cta-card {
+    padding: 28px 20px;
+  }
+
+  .portfolio-cta-card h2 {
+    font-size: 34px !important;
+  }
+
+  .portfolio-cta-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .portfolio-cta-actions > a {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+
   .home-portfolio {
     padding-top: 56px;
     padding-bottom: 64px;
@@ -2764,6 +2785,45 @@ button,
   border-right-color: transparent;
   border-radius: 50%;
   animation: buttonSpin 0.7s linear infinite;
+}
+
+.admin-availability {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--color-platinum);
+}
+
+.admin-block-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.admin-block-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-platinum);
+  border-radius: var(--radius-sm);
+  background: var(--color-cloud-light);
+  font-size: 13px;
+}
+
+.admin-block-list button {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #dc2626;
+}
+
+.admin-block-list button:hover {
+  background: #fef2f2;
 }
 
 @keyframes buttonSpin {
