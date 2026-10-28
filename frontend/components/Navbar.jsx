@@ -20,6 +20,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const dropRef = useRef(null);
   const isAdmin = Boolean(user?.isAdmin);
+  const isAdminDashboard = location.pathname.startsWith("/admin");
 
   // Close on route change
   useEffect(() => {
@@ -222,7 +223,7 @@ export default function Navbar() {
                         <Shield size={13} /> Admin
                       </Link>
                     )}
-                    {!isAdminDashboard && <button
+                    {!isAdmin && !isAdminDashboard && <button
                       type="button"
                       className="frosted-pill-btn"
                       onClick={() => {
