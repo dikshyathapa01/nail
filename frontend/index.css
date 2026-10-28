@@ -2858,16 +2858,75 @@ button,
 @media (max-width: 580px) {
   .curated-hero-grid {
     width: min(100% - 32px, 520px);
-    gap: 32px;
+    gap: 28px;
+    text-align: left;
+  }
+
+  .curated-hero-section {
+    min-height: calc(100svh - 68px);
+    padding: 48px 0 56px;
+    align-items: flex-start;
+  }
+
+  .curated-hero-copy {
+    width: 100%;
+    max-width: none;
+  }
+
+  .curated-hero-title {
+    max-width: 340px;
+    margin-bottom: 20px;
+    font-size: clamp(44px, 12.5vw, 58px);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+  }
+
+  .curated-hero-desc {
+    max-width: 330px;
+    margin: 0 0 26px;
+    font-size: 13.5px;
+    line-height: 1.65;
+  }
+
+  .curated-hero-copy > div {
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .curated-hero-copy .dark-button,
+  .curated-hero-copy .explore-pill-btn {
+    width: auto;
+    max-width: none;
+    min-height: 46px;
+    padding: 12px 15px;
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
   }
 
   .curated-hero-visual {
     order: 2;
+    width: 100%;
   }
 
   .curated-art-wrapper {
     max-width: none;
-    aspect-ratio: 1 / 1.08;
+    aspect-ratio: 4 / 3.2;
+    border-radius: 28px;
+    box-shadow: 0 22px 48px -16px rgba(18, 24, 36, 0.26), 0 4px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .curated-art-wrapper img {
+    object-position: center 28%;
+  }
+
+  .hero-subtle-badge {
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100% - 24px);
+    gap: 7px;
+    padding: 8px 11px;
+    font-size: 9px;
   }
 
   .service-cards {
@@ -2951,5 +3010,236 @@ button,
   .booking-insta-help {
     align-items: flex-start;
     line-height: 1.5;
+  }
+}
+
+/* Admin dashboard responsive layout */
+@media (max-width: 900px) {
+  .admin-dashboard {
+    padding-top: 36px;
+    padding-bottom: 64px;
+  }
+
+  .admin-dashboard-header {
+    align-items: flex-start;
+  }
+
+  .admin-dashboard-header .curated-hero-title {
+    font-size: clamp(44px, 8vw, 64px);
+  }
+
+  .admin-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-saved {
+    margin-top: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard {
+    width: min(100% - 24px, 1200px);
+    padding-top: 28px;
+  }
+
+  .admin-dashboard-header {
+    display: block;
+  }
+
+  .admin-dashboard-header .curated-hero-title {
+    font-size: clamp(38px, 12vw, 54px);
+    line-height: 0.98;
+  }
+
+  .admin-dashboard-header .curated-hero-desc {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .admin-notification-card {
+    width: 100%;
+    margin-top: 20px;
+    justify-content: center;
+  }
+
+  .admin-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 24px -6px 18px;
+    padding: 4px 6px 10px;
+    scrollbar-width: thin;
+  }
+
+  .admin-tabs .frosted-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .admin-upload-card,
+  .admin-saved,
+  .admin-management-card {
+    padding: 20px 16px;
+    border-radius: 22px !important;
+  }
+
+  .admin-card-heading {
+    gap: 9px;
+    margin-bottom: 18px;
+  }
+
+  .admin-card-heading h2,
+  .admin-saved h2 {
+    font-size: 25px;
+    line-height: 1.05;
+  }
+
+  .admin-card-heading p {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .admin-form-grid,
+  .admin-service-form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-service-form textarea {
+    grid-column: auto;
+  }
+
+  .admin-photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .admin-photo-card > div {
+    padding: 10px;
+  }
+
+  .admin-photo-card strong {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .admin-inline-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-inline-form input,
+  .admin-inline-form select,
+  .admin-inline-form button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-category-list {
+    gap: 7px;
+  }
+
+  .admin-category-list div {
+    max-width: 100%;
+    font-size: 12px;
+  }
+
+  .admin-service-list > div {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .admin-service-list > div > div {
+    min-width: 0;
+  }
+
+  .admin-service-list strong {
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
+
+  .admin-service-list small {
+    line-height: 1.4;
+  }
+
+  .admin-service-list > div > span {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .admin-appointment-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .admin-appointments article {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .admin-appointments article > div:first-child {
+    min-width: 0;
+  }
+
+  .admin-appointments span,
+  .admin-appointments small {
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+
+  .admin-appointment-actions {
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 10px !important;
+  }
+
+  .admin-appointment-actions select {
+    width: 100%;
+    min-height: 42px;
+    min-width: 0;
+  }
+
+  .admin-availability {
+    margin-top: 24px;
+    padding-top: 22px;
+  }
+
+  .admin-block-list > div {
+    align-items: flex-start;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .admin-block-list > div > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-dashboard {
+    width: calc(100% - 20px);
+  }
+
+  .admin-upload-card,
+  .admin-saved,
+  .admin-management-card {
+    padding-inline: 13px;
+  }
+
+  .admin-photo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-appointment-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-appointment-actions b {
+    width: fit-content;
   }
 }
