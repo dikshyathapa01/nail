@@ -6,11 +6,10 @@ import { useAuth } from "../context/useAuth";
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
 export default function AuthModal() {
-  const { authModal, closeAuthModal, loginWithGoogle } = useAuth();
+  const { authModal, closeAuthModal } = useAuth();
   const { isOpen, message } = authModal;
   const googleButtonRef = useRef(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !googleClientId) return undefined;
@@ -19,18 +18,8 @@ export default function AuthModal() {
       if (!window.google?.accounts?.id || !googleButtonRef.current) return;
       window.google.accounts.id.initialize({
         client_id: googleClientId,
-        callback: async ({ credential }) => {
-          setLoading(true);
-          setError("");
-          try {
-            await loginWithGoogle(credential);
-            closeAuthModal();
-          } catch (loginError) {
-            setError(loginError instanceof Error ? loginError.message : "Google sign-in failed.");
-          } finally {
-            setLoading(false);
-          }
-        },
+        ux_mode: "redirect",
+        login_uri: `${window.location.origin}/api/auth/google/callback`,
       });
       googleButtonRef.current.replaceChildren();
       window.google.accounts.id.renderButton(googleButtonRef.current, {
@@ -54,7 +43,7 @@ export default function AuthModal() {
     script.onload = renderGoogleButton;
     document.head.appendChild(script);
     return () => script.remove();
-  }, [closeAuthModal, isOpen, loginWithGoogle]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) setError("");
@@ -105,7 +94,6 @@ export default function AuthModal() {
               <div ref={googleButtonRef} className="google-login-button" aria-label="Continue with Google">
                 <span className="sr-only">Continue with Google</span>
               </div>
-              {loading && <p className="auth-prompt-msg">Signing you in securely...</p>}
             </>
           )}
         </motion.div>

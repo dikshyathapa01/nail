@@ -12,6 +12,7 @@ import AuthModal from "./components/AuthModal";
 import MyBookingsModal from "./components/MyBookingsModal";
 import ScrollToTop from "./components/ScrollToTop";
 import Admin from "./pages/Admin";
+import AuthCallback from "./pages/AuthCallback";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/bookings" element={<Admin initialTab="appointments" />} />
             <Route path="/admin/services" element={<Admin initialTab="services" />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
           </Routes>
         </main>
         <Footer />

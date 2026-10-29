@@ -75,14 +75,15 @@ export function AuthProvider({ children }) {
     setAuthModal((prev) => ({ ...prev, mode }));
   };
 
-  const loginWithGoogle = async (credential) => {
+  const authSuccess = authModal.onSuccess;
+  const loginWithGoogle = useCallback(async (credential) => {
     const result = await requestAuth("/auth/google", { credential });
     const sessionUser = { ...result.user, token: result.token || "" };
     setUser(sessionUser);
     sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
-    if (authModal.onSuccess) authModal.onSuccess(sessionUser);
+    if (authSuccess) authSuccess(sessionUser);
     return sessionUser;
-  };
+  }, [authSuccess]);
 
   const logout = () => {
     setUser(null);

@@ -48,6 +48,21 @@ Panel** from the account menu. Uploaded JPG, PNG, WEBP, and GIF images are
 limited to 5 MB. Keep `AUTH_TOKEN_SECRET` stable when deploying so active
 administrator sessions remain valid.
 
+### Google sign-in
+
+Set the Google client ID and the public frontend URL in the API environment:
+
+```dotenv
+GOOGLE_CLIENT_ID=your-google-web-client-id
+FRONTEND_URL=https://nail-gilt.vercel.app
+```
+
+The frontend uses Google Identity Services redirect mode. Add the deployed
+frontend origin to the OAuth client's authorized JavaScript origins and add
+`https://nail-gilt.vercel.app/api/auth/google/callback` as an authorized
+redirect URI. The callback validates Google's posted credential before sending
+the user back to the frontend.
+
 Portfolio images are uploaded to Cloudinary and only their secure URL and
 Cloudinary public ID are stored in PostgreSQL. Create the credentials in the
 Cloudinary dashboard and keep the API secret only in the backend environment.
