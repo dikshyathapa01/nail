@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class GoogleLoginDto {
@@ -12,4 +12,20 @@ export class GoogleLoginDto {
   @MinLength(20)
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   credential: string;
+
+  @IsOptional()
+  @IsString()
+  clientId?: string;
+
+  @IsOptional()
+  @IsString()
+  client_id?: string;
+
+  @IsOptional()
+  @IsString()
+  select_by?: string;
+
+  @IsOptional()
+  @IsString()
+  g_csrf_token?: string;
 }
