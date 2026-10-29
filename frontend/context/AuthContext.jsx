@@ -92,7 +92,14 @@ export function AuthProvider({ children }) {
 
   const authSuccess = authModal.onSuccess;
   const loginWithGoogle = useCallback(async (credential) => {
-    const result = await requestAuth("/auth/google", { credential, deviceId: getDeviceId() });
+    let result;
+    try {
+      result = await requestAuth("/auth/google", { credential, deviceId: getDeviceId() });
+    } catch (error) {
+      const isOlderBackend = error instanceof Error && error.message.includes("property deviceId should not exist");
+      if (!isOlderBackend) throw error;
+      result = await requestAuth("/auth/google", { credential });
+    }
     const sessionUser = { ...result.user, token: result.token || "" };
     setUser(sessionUser);
     sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
