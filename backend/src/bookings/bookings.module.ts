@@ -4,11 +4,13 @@ import { AuthModule } from '../auth/auth.module';
 import { User } from '../auth/user.entity';
 import { NotificationsService } from '../notifications.service';
 import { Booking } from './booking.entity';
+import { AvailabilityBlock } from './availability-block.entity';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
+import { DataSource } from 'typeorm';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Booking, User]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Booking, AvailabilityBlock, User]), AuthModule],
   controllers: [BookingsController],
   providers: [BookingsService, NotificationsService],
   exports: [BookingsService],

@@ -9,7 +9,7 @@ import { useAuth } from "../context/useAuth";
 import { validateEmail } from "../utils/emailValidator";
 
 export default function BookingForm({ date, time, onSuccess }) {
-  const { user, isAuthenticated, openAuthModal, saveBookingLocally } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
   const [submitError, setSubmitError] = useState("");
   const [searchParams] = useSearchParams();
   const serviceParam = searchParams.get("service");
@@ -61,18 +61,17 @@ export default function BookingForm({ date, time, onSuccess }) {
       return;
     }
 
-    const payload = { ...values, date, time, userId: user?.id };
+    const payload = { ...values, date, time };
 
     try {
-      const res = await fetch(`${API_BASE_URL}/bookings`, {
+      const res = await fetch(`${API_BASE_URL}/appointments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         const result = await res.json();
-        saveBookingLocally({ ...payload, id: result.id, status: "confirmed" });
         reset();
         onSuccess(result);
         return;
@@ -87,15 +86,7 @@ export default function BookingForm({ date, time, onSuccess }) {
         return;
       }
 
-      // Graceful offline fallback
-      const saved = saveBookingLocally({
-        id: Date.now(),
-        ...payload,
-        createdAt: new Date().toISOString(),
-        status: "confirmed_offline",
-      });
-      reset();
-      onSuccess({ name: values.name, ...saved, message: "Request received! We'll confirm via WhatsApp shortly." });
+      setSubmitError("The booking service is unavailable. Please try again when you are online.");
     }
   };
 

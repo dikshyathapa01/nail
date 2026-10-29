@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
 import { Booking } from './bookings/booking.entity';
+import { AvailabilityBlock } from './bookings/availability-block.entity';
 import { BookingsModule } from './bookings/bookings.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { GalleryItem } from './gallery/gallery.entity';
@@ -29,7 +30,7 @@ config({ path: join(__dirname, '..', '.env') });
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, Admin, Booking, GalleryItem, ServiceCategory, StudioService],
+      entities: [User, Admin, Booking, AvailabilityBlock, GalleryItem, ServiceCategory, StudioService],
       autoLoadEntities: true,
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
     }),

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { API_BASE_URL } from "../api";
 import { AuthContext } from "./auth-context";
 
@@ -15,12 +15,24 @@ function readSessionUser() {
 }
 
 async function requestAuth(path, payload) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error(
+      "Unable to reach the authentication server. Please check that the backend is running and deployed.",
+    );
+  }
   const result = await response.json().catch(() => ({}));
+  if (response.status === 404 && path === "/auth/google") {
+    throw new Error(
+      "Google sign-in is not available on the deployed backend yet. Redeploy the backend with the latest code.",
+    );
+  }
   if (!response.ok) {
     const message = Array.isArray(result.message) ? result.message.join(", ") : result.message;
     throw new Error(message || "Unable to complete the authentication request.");
@@ -42,7 +54,7 @@ export function AuthProvider({ children }) {
   // Auth modal state
   const [authModal, setAuthModal] = useState({
     isOpen: false,
-    mode: "login", // "login" | "signup"
+    mode: "login",
     message: "",
     onSuccess: null,
   });
@@ -62,26 +74,13 @@ export function AuthProvider({ children }) {
     setAuthModal((prev) => ({ ...prev, mode }));
   };
 
-  const login = async ({ email, password }) => {
-    const result = await requestAuth("/auth/login", { email, password });
-    const sessionUser = { ...result.user, adminToken: result.adminToken || "" };
+  const loginWithGoogle = async (credential) => {
+    const result = await requestAuth("/auth/google", { credential });
+    const sessionUser = { ...result.user, token: result.token || "" };
     setUser(sessionUser);
-    sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
-      ...sessionUser,
-    }));
-
-    // Fire callback (e.g. complete a pending booking)
-    if (authModal.onSuccess) {
-      authModal.onSuccess(sessionUser);
-    }
+    sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
+    if (authModal.onSuccess) authModal.onSuccess(sessionUser);
     return sessionUser;
-  };
-
-  // Signup: creates account then closes modal WITHOUT logging in
-  // Caller should open the login view after this resolves
-  const signup = async ({ name, email, phone, password }) => {
-    const result = await requestAuth("/auth/signup", { name, email, phone, password });
-    return result.user;
   };
 
   const logout = () => {
@@ -92,29 +91,16 @@ export function AuthProvider({ children }) {
     } catch (e) { /* */ }
   };
 
-  const getUserBookings = () => {
-    if (!user) return [];
-    try {
-      const all = JSON.parse(localStorage.getItem("offline_nail_bookings") || "[]");
-      return all
-        .filter((b) => b.userId === user.id || (b.email && b.email.toLowerCase() === user.email.toLowerCase()))
-        .reverse();
-    } catch {
-      return [];
-    }
-  };
+  const getUserBookings = useCallback(async () => {
+    if (!user?.token) return [];
+    const response = await fetch(`${API_BASE_URL}/appointments/mine`, {
+      headers: { Authorization: `Bearer ${user.token}` },
+    });
+    if (!response.ok) throw new Error("Unable to load your appointments.");
+    return response.json();
+  }, [user]);
 
-  const saveBookingLocally = (data) => {
-    try {
-      const all = JSON.parse(localStorage.getItem("offline_nail_bookings") || "[]");
-      const record = { ...data, userId: user?.id, savedAt: new Date().toISOString() };
-      all.push(record);
-      localStorage.setItem("offline_nail_bookings", JSON.stringify(all));
-      return record;
-    } catch {
-      return data;
-    }
-  };
+  const saveBookingLocally = (data) => data;
 
   return (
     <AuthContext.Provider
@@ -126,8 +112,7 @@ export function AuthProvider({ children }) {
         openAuthModal,
         closeAuthModal,
         switchAuthMode,
-        login,
-        signup,
+        loginWithGoogle,
         logout,
         getUserBookings,
         saveBookingLocally,

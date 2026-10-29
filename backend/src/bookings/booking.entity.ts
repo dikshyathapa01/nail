@@ -6,7 +6,6 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   RelationId,
-  Unique,
 } from 'typeorm';
 import { User } from '../auth/user.entity';
 
@@ -18,17 +17,16 @@ export enum BookingStatus {
 }
 
 @Entity({ name: 'bookings' })
-@Unique(['date', 'time'])
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user?: User | null;
+  user: User;
 
   @RelationId((booking: Booking) => booking.user)
-  userId?: string | null;
+  userId: string;
 
   @Column({ type: 'varchar', length: 100 })
   service: string;

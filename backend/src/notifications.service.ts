@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import {
   BookingEmailData,
   renderBookingEmail,
@@ -78,6 +79,7 @@ export class NotificationsService {
         if (attempt < 3) {
           await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** (attempt - 1)));
         }
+
       }
 
       throw lastError || new Error('Resend failed to send the email');
@@ -89,5 +91,29 @@ export class NotificationsService {
 
       throw error;
     }
+  }
+
+  async sendVerificationEmail(to: string, name: string, link: string) {
+    const host = process.env.SMTP_HOST;
+    const from = process.env.EMAIL_FROM?.trim();
+    if (!host || !from) {
+      this.logger.error('Email verification is unavailable: SMTP_HOST and EMAIL_FROM are required.');
+      throw new ServiceUnavailableException(
+        'Email verification is not configured. Set SMTP_HOST and EMAIL_FROM on the backend.',
+      );
+    }
+    const transporter = nodemailer.createTransport({
+      host,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } : undefined,
+    });
+    await transporter.sendMail({
+      from,
+      to,
+      subject: 'Verify your Nail Inspo account',
+      text: `Hi ${name}, verify your account here: ${link}`,
+      html: `<p>Hi ${name},</p><p><a href="${link}">Verify your Nail Inspo account</a></p>`,
+    });
   }
 }

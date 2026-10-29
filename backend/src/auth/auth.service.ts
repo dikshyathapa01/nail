@@ -4,10 +4,9 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { User } from './user.entity';
@@ -23,6 +22,8 @@ export interface UserResponse {
   avatar: string;
   createdAt?: string;
   isAdmin: boolean;
+  isVerified: boolean;
+  token?: string;
 }
 
 @Injectable()
@@ -58,6 +59,7 @@ export class AuthService {
           where: { email: user.email.toLowerCase(), isActive: true },
         }),
       ),
+      isVerified: user.isVerified,
     };
   }
 
@@ -77,6 +79,7 @@ export class AuthService {
       avatar: initials || 'A',
       createdAt: admin.createdAt?.toISOString(),
       isAdmin: true,
+      isVerified: true,
     };
   }
 
@@ -88,6 +91,34 @@ export class AuthService {
       .update(payload)
       .digest('base64url');
     return `${payload}.${signature}`;
+  }
+
+  private signUserToken(user: User) {
+    const payload = Buffer.from(JSON.stringify({
+      sub: user.id,
+      email: user.email,
+      exp: Date.now() + 1000 * 60 * 60 * 24 * 30,
+    })).toString('base64url');
+    const signature = createHmac('sha256', process.env.AUTH_TOKEN_SECRET || 'local-development-secret')
+      .update(payload).digest('base64url');
+    return `${payload}.${signature}`;
+  }
+
+  async verifyUserToken(token: string): Promise<User | null> {
+    const [payload, signature] = token.split('.');
+    if (!payload || !signature) return null;
+    const expected = createHmac('sha256', process.env.AUTH_TOKEN_SECRET || 'local-development-secret')
+      .update(payload).digest('base64url');
+    if (signature.length !== expected.length ||
+      !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
+    try {
+      const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string; exp?: number };
+      if (!decoded.sub || !decoded.exp || decoded.exp <= Date.now()) return null;
+      const user = await this.userRepository.findOne({ where: { id: decoded.sub, isActive: true } });
+      return user?.isVerified ? user : null;
+    } catch {
+      return null;
+    }
   }
 
   async verifyAdminToken(token: string): Promise<boolean> {
@@ -113,76 +144,43 @@ export class AuthService {
     }
   }
 
-  async signup(dto: SignupDto): Promise<{ message: string; user: UserResponse }> {
-    const email = dto.email.trim().toLowerCase();
-    await verifyRealEmail(email);
-
-    if (await this.userRepository.findOne({ where: { email } })) {
-      throw new ConflictException(
-        'An account with this email already exists. Please sign in instead.',
-      );
+  async loginWithGoogle(credential: string) {
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    if (!clientId) {
+      throw new UnauthorizedException('Google authentication is not configured on the backend.');
     }
-
-    const name = dto.name?.trim() || [dto.firstName, dto.lastName].filter(Boolean).join(' ');
-    const user = this.userRepository.create({
-      name,
-      firstName: dto.firstName?.trim() || name.split(' ')[0],
-      lastName: dto.lastName?.trim() || name.split(' ').slice(1).join(' ') || null,
-      email,
-      phone: dto.phone?.trim() || null,
-      password: hashPassword(dto.password),
-      isActive: true,
-    });
-
-    try {
-      const savedUser = await this.userRepository.save(user);
-      const responseUser = await this.formatUser(savedUser);
-      this.logger.log(`New user registered: ${responseUser.email} (${responseUser.id})`);
-      return {
-        message: 'Account created successfully! Please sign in with your credentials.',
-        user: responseUser,
-      };
-    } catch (error) {
-      if ((error as { code?: string }).code === '23505') {
-        throw new ConflictException(
-          'An account with this email already exists. Please sign in instead.',
-        );
-      }
-      throw error;
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (!response.ok) throw new UnauthorizedException('Google authentication failed.');
+    const profile = await response.json() as { sub?: string; email?: string; email_verified?: string; name?: string; picture?: string; aud?: string };
+    if (!profile.sub || !profile.email || profile.email_verified !== 'true' ||
+      profile.aud !== clientId) {
+      throw new UnauthorizedException('Google account could not be verified.');
     }
-  }
-
-  async login(dto: LoginDto): Promise<{ message: string; user: UserResponse; adminToken?: string }> {
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.userRepository.findOne({ where: { email } });
-
-    if (!user || !user.isActive) {
-      const admin = await this.adminRepository.findOne({
-        where: { email, isActive: true },
+    const email = profile.email.toLowerCase();
+    const googleUser = await this.userRepository.findOne({ where: { googleId: profile.sub } });
+    const emailUser = await this.userRepository.findOne({ where: { email } });
+    if (googleUser && emailUser && googleUser.id !== emailUser.id) {
+      throw new ConflictException('This Google account and email belong to different user records.');
+    }
+    let user = googleUser || emailUser;
+    if (!user) {
+      user = this.userRepository.create({
+        email,
+        name: profile.name || 'Google user',
+        password: hashPassword(randomBytes(32).toString('hex')),
+        googleId: profile.sub,
+        isVerified: true,
+        isActive: true,
       });
-      if (admin && comparePassword(dto.password, admin.password)) {
-        return {
-          message: 'Administrator login successful.',
-          user: this.formatAdmin(admin),
-          adminToken: this.signAdminToken(admin.email),
-        };
-      }
-      throw new UnauthorizedException(
-        'No account found with this email. Please check your email or sign up.',
-      );
+    } else {
+      user.googleId = profile.sub;
+      user.isVerified = true;
+      if (profile.name && !user.name) user.name = profile.name;
     }
-
-    if (!comparePassword(dto.password, user.password)) {
-      throw new UnauthorizedException('Incorrect password. Please try again.');
-    }
-
-    const responseUser = await this.formatUser(user);
-    this.logger.log(`User logged in: ${responseUser.email}`);
-    return {
-      message: 'Welcome back!',
-      user: responseUser,
-      ...(responseUser.isAdmin ? { adminToken: this.signAdminToken(responseUser.email) } : {}),
-    };
+    user.isVerified = true;
+    const saved = await this.userRepository.save(user);
+    const responseUser = await this.formatUser(saved);
+    return { message: 'Welcome back!', user: responseUser, token: this.signUserToken(saved) };
   }
 
   async createAdmin(dto: CreateAdminDto, setupKey: string | undefined) {

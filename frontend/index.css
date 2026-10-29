@@ -109,6 +109,7 @@ img {
   background: rgba(255, 255, 255, 0.88);
   border-bottom: 1px solid var(--color-platinum);
   backdrop-filter: blur(20px);
+  isolation: isolate;
 }
 
 .nav-inner {
@@ -219,6 +220,8 @@ img {
   background: transparent;
   padding: 8px;
   border-radius: var(--radius-sm);
+  position: relative;
+  z-index: 40;
 }
 
 .mobile-nav {
@@ -404,6 +407,10 @@ h2 em {
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  position: relative;
+  z-index: 31;
+  max-height: calc(100dvh - 68px);
+  overflow-y: auto;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2477,6 +2484,9 @@ html, body { max-width: 100vw; overflow-x: hidden; }
 /* ── My Bookings modal ── */
 .my-bookings-list { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; max-height: 55vh; overflow-y: auto; padding-right: 4px; }
 .my-bookings-empty { text-align: center; padding: 32px 20px; }
+.booking-edit-form { display: grid; gap: 8px; margin-top: 12px; padding: 12px; border: 1px solid var(--color-line); border-radius: var(--radius-md); background: var(--color-cloud-light); }
+.booking-edit-form label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; color: var(--color-text-sub); }
+.booking-edit-form input, .booking-edit-form textarea { width: 100%; padding: 8px; border: 1px solid var(--color-platinum); border-radius: var(--radius-sm); background: white; }
 .my-bookings-empty h3 { font-size: 18px; margin: 10px 0 6px; }
 .my-bookings-empty p { font-size: 13px; color: var(--color-text-muted); margin: 0 0 16px; }
 .booking-card {

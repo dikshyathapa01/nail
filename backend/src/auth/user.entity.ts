@@ -2,11 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity({ name: 'users' })
+@Index('users_phone_unique', ['phone'], { unique: true, where: '"phone" IS NOT NULL' })
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -16,6 +18,12 @@ export class User {
 
   @Column({ name: 'password_hash', type: 'varchar', length: 255 })
   password: string;
+
+  @Column({ name: 'google_id', type: 'varchar', length: 255, nullable: true, unique: true })
+  googleId?: string | null;
+
+  @Column({ name: 'is_verified', type: 'boolean', default: false })
+  isVerified: boolean;
 
   @Column({ name: 'first_name', type: 'varchar', length: 80, nullable: true })
   firstName?: string | null;

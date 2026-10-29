@@ -262,10 +262,10 @@ export default function Navbar() {
                     className="light-button mobile-auth-pill"
                     onClick={() => {
                       setMobileOpen(false);
-                      openAuthModal({ mode: "signup" });
+                      openAuthModal({ mode: "login" });
                     }}
                   >
-                    Create Account
+                    Continue with Google
                   </button>
                 </div>
               )}
