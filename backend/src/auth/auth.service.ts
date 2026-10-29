@@ -6,7 +6,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LoginDto } from './dto/login.dto';
@@ -15,6 +15,7 @@ import { User } from './user.entity';
 import { Admin } from './admin.entity';
 import { hashPassword, comparePassword } from '../common/password.util';
 import { verifyRealEmail } from '../common/email-verifier';
+import { UserSession } from './user-session.entity';
 
 export interface UserResponse {
   id: string;
@@ -37,6 +38,8 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
+    @InjectRepository(UserSession)
+    private readonly sessionRepository: Repository<UserSession>,
   ) {}
 
   private async formatUser(user: User): Promise<UserResponse> {
@@ -106,6 +109,30 @@ export class AuthService {
     return `${payload}.${signature}`;
   }
 
+  private hashToken(token: string) {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async createUserSession(user: User, deviceId: string) {
+    const payload = Buffer.from(JSON.stringify({
+      sub: user.id,
+      email: user.email,
+      sessionId: randomBytes(16).toString('hex'),
+      exp: Date.now() + 1000 * 60 * 60 * 24 * 30,
+    })).toString('base64url');
+    const signature = createHmac('sha256', process.env.AUTH_TOKEN_SECRET || 'local-development-secret')
+      .update(payload).digest('base64url');
+    const token = `${payload}.${signature}`;
+    await this.sessionRepository.upsert({
+      userId: user.id,
+      deviceId,
+      tokenHash: this.hashToken(token),
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+      revokedAt: null,
+    }, ['userId', 'deviceId']);
+    return token;
+  }
+
   async verifyUserToken(token: string): Promise<User | null> {
     const [payload, signature] = token.split('.');
     if (!payload || !signature) return null;
@@ -114,8 +141,14 @@ export class AuthService {
     if (signature.length !== expected.length ||
       !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
     try {
-      const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string; exp?: number };
+      const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as { sub?: string; exp?: number; sessionId?: string };
       if (!decoded.sub || !decoded.exp || decoded.exp <= Date.now()) return null;
+      if (decoded.sessionId) {
+        const session = await this.sessionRepository.findOne({ where: { tokenHash: this.hashToken(token) } });
+        if (session?.revokedAt) return null;
+        if (!session || session.expiresAt.getTime() <= Date.now()) return null;
+        await this.sessionRepository.update(session.id, { lastSeenAt: new Date() });
+      }
       const user = await this.userRepository.findOne({ where: { id: decoded.sub, isActive: true } });
       return user?.isVerified ? user : null;
     } catch {
@@ -146,7 +179,7 @@ export class AuthService {
     }
   }
 
-  async loginWithGoogle(credential: string) {
+  async loginWithGoogle(credential: string, deviceId = `device-${randomBytes(12).toString('hex')}`) {
     const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
     if (!clientId) {
       throw new UnauthorizedException('Google authentication is not configured on the backend.');
@@ -183,7 +216,7 @@ export class AuthService {
       user.isVerified = true;
       const saved = await this.userRepository.save(user);
       const responseUser = await this.formatUser(saved);
-      return { message: 'Welcome back!', user: responseUser, token: this.signUserToken(saved) };
+      return { message: 'Welcome back!', user: responseUser, token: await this.createUserSession(saved, deviceId) };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       const message = error instanceof Error ? error.message : String(error);
@@ -193,11 +226,34 @@ export class AuthService {
           'The database is missing the Google authentication columns. Apply database/migrations/001-auth-bookings.sql and redeploy.',
         );
       }
+
       if ((error as { code?: string }).code === '23505') {
         throw new ConflictException('This Google email or account is already linked to another user.');
       }
       throw new InternalServerErrorException('Unable to save your Google profile. Please try again.');
     }
+  }
+
+  async revokeUserSession(token: string) {
+    await this.sessionRepository.update(
+      { tokenHash: this.hashToken(token) },
+      { revokedAt: new Date() },
+    );
+  }
+
+  async refreshUserSession(token: string) {
+    const user = await this.verifyUserToken(token);
+    if (!user) throw new UnauthorizedException('Your session has expired. Please sign in again.');
+    const session = await this.sessionRepository.findOne({
+      where: { tokenHash: this.hashToken(token) },
+    });
+    if (!session || session.revokedAt || session.expiresAt.getTime() <= Date.now()) {
+      throw new UnauthorizedException('Your session has expired. Please sign in again.');
+    }
+    return {
+      user: await this.formatUser(user),
+      token: await this.createUserSession(user, session.deviceId),
+    };
   }
 
   async createAdmin(dto: CreateAdminDto, setupKey: string | undefined) {

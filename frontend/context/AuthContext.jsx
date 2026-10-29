@@ -1,8 +1,20 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "../api";
 import { AuthContext } from "./auth-context";
+import { io } from "socket.io-client";
 
 const STORAGE_KEY_USER = "nail_inspo_auth_user";
+const STORAGE_KEY_DEVICE = "nail_inspo_device_id";
+const SYNC_CHANNEL = "nail_inspo_state_sync";
+
+function getDeviceId() {
+  let deviceId = localStorage.getItem(STORAGE_KEY_DEVICE);
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem(STORAGE_KEY_DEVICE, deviceId);
+  }
+  return deviceId;
+}
 
 function readSessionUser() {
   try {
@@ -42,6 +54,9 @@ async function requestAuth(path, payload) {
 }
 
 export function AuthProvider({ children }) {
+  const channelRef = useRef(null);
+  const socketRef = useRef(null);
+  const [syncVersion, setSyncVersion] = useState(0);
   const [user, setUser] = useState(() => {
     try {
       // Remove the old persistent login created by earlier versions.
@@ -77,21 +92,69 @@ export function AuthProvider({ children }) {
 
   const authSuccess = authModal.onSuccess;
   const loginWithGoogle = useCallback(async (credential) => {
-    const result = await requestAuth("/auth/google", { credential });
+    const result = await requestAuth("/auth/google", { credential, deviceId: getDeviceId() });
     const sessionUser = { ...result.user, token: result.token || "" };
     setUser(sessionUser);
     sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
+    channelRef.current?.postMessage({ type: "auth", user: sessionUser });
     if (authSuccess) authSuccess(sessionUser);
     return sessionUser;
   }, [authSuccess]);
 
   const logout = () => {
+    if (user?.token) {
+      fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + user.token },
+      }).catch(() => {});
+    }
     setUser(null);
+    channelRef.current?.postMessage({ type: "auth", user: null });
     try {
       sessionStorage.removeItem(STORAGE_KEY_USER);
       localStorage.removeItem(STORAGE_KEY_USER);
     } catch (e) { /* */ }
   };
+
+  useEffect(() => {
+    const channel = "BroadcastChannel" in window ? new BroadcastChannel(SYNC_CHANNEL) : null;
+    channelRef.current = channel;
+    const onMessage = (event) => {
+      if (event.data?.type === "auth") {
+        setUser(event.data.user);
+        if (event.data.user) sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(event.data.user));
+        else sessionStorage.removeItem(STORAGE_KEY_USER);
+      }
+      if (event.data?.type === "booking:updated") setSyncVersion((version) => version + 1);
+    };
+    channel?.addEventListener("message", onMessage);
+    return () => {
+      channel?.removeEventListener("message", onMessage);
+      channel?.close();
+      channelRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    socketRef.current?.disconnect();
+    if (!user?.token) {
+      socketRef.current = null;
+      return undefined;
+    }
+    const syncOrigin = API_BASE_URL.replace(/\/api\/?$/, "") || window.location.origin;
+    const socket = io(`${syncOrigin}/sync`, { auth: { token: user.token } });
+    const onBookingUpdate = (event) => {
+      setSyncVersion((version) => version + 1);
+      channelRef.current?.postMessage({ type: "booking:updated", event });
+    };
+    socket.on("booking:updated", onBookingUpdate);
+    socketRef.current = socket;
+    return () => {
+      socket.off("booking:updated", onBookingUpdate);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [user?.token]);
 
   const getUserBookings = useCallback(async () => {
     if (!user?.token) return [];
@@ -117,6 +180,7 @@ export function AuthProvider({ children }) {
         loginWithGoogle,
         logout,
         getUserBookings,
+        syncVersion,
         saveBookingLocally,
         myBookingsOpen,
         setMyBookingsOpen,

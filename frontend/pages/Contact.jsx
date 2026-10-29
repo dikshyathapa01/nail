@@ -6,6 +6,10 @@ import InstagramIcon from "../components/InstagramIcon";
 import EditorialBackground from "../components/EditorialBackground";
 
 export default function Contact() {
+  const whatsappUrl = `https://wa.me/${STUDIO_PHONE.replace(/\D/g, "")}?text=${encodeURIComponent(
+    "Hello Nail Inspo! I would like to know more about your nail services.",
+  )}`;
+
   return (
     <section className="page-shell editorial-page-shell contact-page" aria-label="Contact">
       <EditorialBackground />
@@ -47,14 +51,17 @@ export default function Contact() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <a href={`tel:${STUDIO_PHONE.replace(/\s+/g, '')}`} className="editorial-frosted-card">
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className="editorial-frosted-card">
               <Phone size={20} />
               <div>
                 <small>Call / WhatsApp</small>
                 <span>{STUDIO_PHONE}</span>
               </div>
             </a>
-            <a href={`mailto:${STUDIO_EMAIL}`} className="editorial-frosted-card">
+            <a
+              href={`mailto:${STUDIO_EMAIL}?subject=${encodeURIComponent("Nail Inspo inquiry")}`}
+              className="editorial-frosted-card"
+            >
               <Mail size={20} />
               <div>
                 <small>Email Inquiries</small>
@@ -75,4 +82,3 @@ export default function Contact() {
     </section>
   );
 }
-

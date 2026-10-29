@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { RefreshSessionDto } from './dto/refresh-session.dto';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -13,7 +14,7 @@ export class AuthController {
 
   @Post('google')
   loginWithGoogle(@Body() dto: GoogleLoginDto) {
-    return this.authService.loginWithGoogle(dto.credential);
+    return this.authService.loginWithGoogle(dto.credential, dto.deviceId);
   }
 
   @Post('google/callback')
@@ -24,7 +25,7 @@ export class AuthController {
       ? configuredFrontendUrl
       : 'https://nail-gilt.vercel.app';
     try {
-      await this.authService.loginWithGoogle(dto.credential);
+      await this.authService.loginWithGoogle(dto.credential, dto.deviceId);
       const credential = encodeURIComponent(dto.credential);
       return response.redirect(
         `${frontendUrl}/auth/callback#credential=${credential}`,
@@ -35,6 +36,18 @@ export class AuthController {
         `${frontendUrl}/auth/callback?error=${encodeURIComponent(message)}`,
       );
     }
+
+  }
+
+  @Post('logout')
+  logout(@Headers('authorization') authorization?: string) {
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
+    return this.authService.revokeUserSession(token);
+  }
+
+  @Post('refresh')
+  refresh(@Body() dto: RefreshSessionDto) {
+    return this.authService.refreshUserSession(dto.token);
   }
 
   @Post('admin/create')

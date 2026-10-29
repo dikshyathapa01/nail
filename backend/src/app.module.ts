@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 import { join } from 'node:path';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
+import { UserSession } from './auth/user-session.entity';
 import { Booking } from './bookings/booking.entity';
 import { AvailabilityBlock } from './bookings/availability-block.entity';
 import { BookingsModule } from './bookings/bookings.module';
@@ -14,12 +15,14 @@ import { CategoriesModule } from './categories/categories.module';
 import { ServiceCategory } from './categories/category.entity';
 import { ServicesModule } from './services/services.module';
 import { StudioService } from './services/service.entity';
+import { RealtimeModule } from './realtime/realtime.module';
 
 config({ path: join(__dirname, '..', '.env') });
 
 @Module({
   imports: [
     AuthModule,
+    RealtimeModule,
     BookingsModule,
     GalleryModule,
     CategoriesModule,
@@ -30,7 +33,7 @@ config({ path: join(__dirname, '..', '.env') });
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [User, Admin, Booking, AvailabilityBlock, GalleryItem, ServiceCategory, StudioService],
+      entities: [User, UserSession, Admin, Booking, AvailabilityBlock, GalleryItem, ServiceCategory, StudioService],
       autoLoadEntities: true,
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
     }),

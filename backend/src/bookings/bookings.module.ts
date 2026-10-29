@@ -8,9 +8,10 @@ import { AvailabilityBlock } from './availability-block.entity';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { DataSource } from 'typeorm';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Booking, AvailabilityBlock, User]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Booking, AvailabilityBlock, User]), AuthModule, RealtimeModule],
   controllers: [BookingsController],
   providers: [BookingsService, NotificationsService],
   exports: [BookingsService],

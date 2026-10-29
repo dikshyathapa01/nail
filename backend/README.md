@@ -63,6 +63,19 @@ frontend origin to the OAuth client's authorized JavaScript origins and add
 redirect URI. The callback validates Google's posted credential before sending
 the user back to the frontend.
 
+### Multi-device sessions and live updates
+
+Each browser/device receives its own session row in `user_sessions`; signing in
+on another device does not revoke existing sessions. Apply
+`database/migrations/002-user-sessions.sql` before deploying when
+`TYPEORM_SYNCHRONIZE=false`. The `/api/auth/refresh` endpoint rotates an active
+session token for the same device.
+
+Authenticated Socket.IO clients connect to the `/sync` namespace. Booking
+create, edit, cancel, and status events are delivered to every active session
+for that user. The frontend also uses `BroadcastChannel` for same-browser tab
+synchronization.
+
 Portfolio images are uploaded to Cloudinary and only their secure URL and
 Cloudinary public ID are stored in PostgreSQL. Create the credentials in the
 Cloudinary dashboard and keep the API secret only in the backend environment.

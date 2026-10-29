@@ -17,6 +17,7 @@ import { User } from '../auth/user.entity';
 import { verifyRealEmail } from '../common/email-verifier';
 import { AvailabilityBlockDto } from './dto/availability-block.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
+import { UserSyncGateway } from '../realtime/user-sync.gateway';
 
 @Injectable()
 export class BookingsService {
@@ -31,6 +32,7 @@ export class BookingsService {
     private readonly userRepository: Repository<User>,
     private readonly notificationsService: NotificationsService,
     private readonly dataSource: DataSource,
+    private readonly userSyncGateway: UserSyncGateway,
   ) {}
 
   private toResponse(booking: Booking) {
@@ -139,6 +141,10 @@ export class BookingsService {
     }
 
     const response = this.toResponse(savedBooking);
+    this.userSyncGateway.emitUserEvent(savedBooking.userId, 'booking:updated', {
+      action: 'created',
+      booking: response,
+    });
     this.logger.log(`Booking created successfully: ${savedBooking.id}`);
 
     try {
@@ -220,7 +226,11 @@ export class BookingsService {
     const booking = await this.bookingRepository.findOne({ where: { id }, relations: { user: true } });
     if (!booking) throw new ConflictException('Appointment not found.');
     booking.status = status;
-    return this.toResponse(await this.bookingRepository.save(booking));
+    const response = this.toResponse(await this.bookingRepository.save(booking));
+    if (booking.userId) {
+      this.userSyncGateway.emitUserEvent(booking.userId, 'booking:updated', { action: 'status', booking: response });
+    }
+    return response;
   }
 
   async updateForUser(id: string, userId: string, dto: UpdateBookingDto) {
@@ -252,7 +262,9 @@ export class BookingsService {
         }
         return manager.save(booking);
       });
-      return this.toResponse(saved);
+      const response = this.toResponse(saved);
+      this.userSyncGateway.emitUserEvent(userId, 'booking:updated', { action: 'updated', booking: response });
+      return response;
     } catch (error) {
       if ((error as { code?: string }).code === '23505') throw new ConflictException('That time is already requested.');
       throw error;
@@ -264,7 +276,11 @@ export class BookingsService {
     if (!booking || booking.userId !== userId) throw new ConflictException('Appointment not found.');
     this.assertChangeable(booking);
     booking.status = BookingStatus.CANCELLED;
-    return this.toResponse(await this.bookingRepository.save(booking));
+    const response = this.toResponse(await this.bookingRepository.save(booking));
+    if (booking.userId) {
+      this.userSyncGateway.emitUserEvent(booking.userId, 'booking:updated', { action: 'status', booking: response });
+    }
+    return response;
   }
 
   private assertChangeable(booking: Booking) {

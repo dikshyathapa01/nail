@@ -5,8 +5,17 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { STUDIO_PHONE } from "../data";
 
+function getMinimumBookingDate() {
+  const minimumDate = new Date();
+  minimumDate.setHours(0, 0, 0, 0);
+  minimumDate.setDate(minimumDate.getDate() + 1);
+  const month = String(minimumDate.getMonth() + 1).padStart(2, "0");
+  const day = String(minimumDate.getDate()).padStart(2, "0");
+  return `${minimumDate.getFullYear()}-${month}-${day}`;
+}
+
 export default function MyBookingsModal() {
-  const { myBookingsOpen, setMyBookingsOpen, user, getUserBookings } = useAuth();
+  const { myBookingsOpen, setMyBookingsOpen, user, getUserBookings, syncVersion } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -17,7 +26,7 @@ export default function MyBookingsModal() {
     if (!myBookingsOpen) return;
     setError("");
     getUserBookings().then(setBookings).catch((err) => setError(err.message));
-  }, [myBookingsOpen, getUserBookings]);
+  }, [myBookingsOpen, getUserBookings, syncVersion]);
 
   const cancelBooking = async (id) => {
     if (!window.confirm("Cancel this appointment?")) return;
@@ -33,6 +42,10 @@ export default function MyBookingsModal() {
   };
 
   const saveBooking = async (id) => {
+    if (!editForm.date || editForm.date < getMinimumBookingDate()) {
+      setError("Appointments must be scheduled from tomorrow onward.");
+      return;
+    }
     setBusyId(id);
     try {
       const response = await fetch(`${import.meta.env.PROD ? "/api" : "http://localhost:5000/api"}/appointments/${id}`, {
@@ -108,7 +121,17 @@ export default function MyBookingsModal() {
                   )}
                   {editingId === b.id && (
                     <div className="booking-edit-form">
-                      <label>Date <input type="date" value={editForm.date} onChange={(event) => setEditForm({ ...editForm, date: event.target.value })} /></label>
+                      <label>Date <input
+                        type="date"
+                        min={getMinimumBookingDate()}
+                        value={editForm.date}
+                        onChange={(event) => {
+                          const date = event.target.value;
+                          if (date >= getMinimumBookingDate()) {
+                            setEditForm({ ...editForm, date });
+                          }
+                        }}
+                      /></label>
                       <label>Time <input value={editForm.time} placeholder="09:00 - 10:30" onChange={(event) => setEditForm({ ...editForm, time: event.target.value })} /></label>
                       <label>Nail art preferences <textarea rows={2} value={editForm.notes} onChange={(event) => setEditForm({ ...editForm, notes: event.target.value })} /></label>
                       <div className="mobile-user-btn-row">

@@ -28,4 +28,9 @@ export class GoogleLoginDto {
   @IsOptional()
   @IsString()
   g_csrf_token?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  deviceId?: string;
 }
