@@ -16,6 +16,8 @@ import { ServiceCategory } from './categories/category.entity';
 import { ServicesModule } from './services/services.module';
 import { StudioService } from './services/service.entity';
 import { RealtimeModule } from './realtime/realtime.module';
+import { AddGoogleAuthColumns1710000000000 } from './database/migrations/1710000000000-AddGoogleAuthColumns';
+import { CreateUserSessions1710000000001 } from './database/migrations/1710000000001-CreateUserSessions';
 
 config({ path: join(__dirname, '..', '.env') });
 
@@ -36,6 +38,8 @@ config({ path: join(__dirname, '..', '.env') });
       entities: [User, UserSession, Admin, Booking, AvailabilityBlock, GalleryItem, ServiceCategory, StudioService],
       autoLoadEntities: true,
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
+      migrations: [AddGoogleAuthColumns1710000000000, CreateUserSessions1710000000001],
+      migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN !== 'false',
     }),
   ],
 })

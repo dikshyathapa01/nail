@@ -223,7 +223,7 @@ export class AuthService {
       this.logger.error(`Google user synchronization failed: ${message}`);
       if (/column .* does not exist|relation .* does not exist/i.test(message)) {
         throw new InternalServerErrorException(
-          'The database is missing the Google authentication columns. Apply database/migrations/001-auth-bookings.sql and redeploy.',
+          'The database schema is missing Google authentication columns. Redeploy the backend so its schema bootstrap can apply database/migrations/001-auth-bookings.sql.',
         );
       }
 

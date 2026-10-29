@@ -66,10 +66,10 @@ the user back to the frontend.
 ### Multi-device sessions and live updates
 
 Each browser/device receives its own session row in `user_sessions`; signing in
-on another device does not revoke existing sessions. Apply
-`database/migrations/002-user-sessions.sql` before deploying when
-`TYPEORM_SYNCHRONIZE=false`. The `/api/auth/refresh` endpoint rotates an active
-session token for the same device.
+on another device does not revoke existing sessions. TypeORM runs the tracked
+migrations in `backend/src/database/migrations` automatically at startup
+unless `TYPEORM_MIGRATIONS_RUN=false`. The `/api/auth/refresh` endpoint rotates
+an active session token for the same device.
 
 Authenticated Socket.IO clients connect to the `/sync` namespace. Booking
 create, edit, cancel, and status events are delivered to every active session
@@ -106,4 +106,7 @@ TYPEORM_SYNCHRONIZE=true
 
 `TYPEORM_SYNCHRONIZE=true` lets TypeORM create or update tables from the entities. Never enable it for production data.
 
-For production, set `TYPEORM_SYNCHRONIZE=false` and apply reviewed TypeORM migrations before deploying entity changes. Keep database credentials and API keys in the deployment environment, not in source control.
+For production, set `TYPEORM_SYNCHRONIZE=false` and keep
+`TYPEORM_MIGRATIONS_RUN=true` so reviewed TypeORM migrations run at startup.
+Keep database credentials and API keys in the deployment environment, not in
+source control.
