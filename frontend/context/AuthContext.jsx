@@ -23,9 +23,10 @@ async function requestAuth(path, payload) {
       body: JSON.stringify(payload),
     });
   } catch {
-    throw new Error(
-      "Unable to reach the authentication server. Please check that the backend is running and deployed.",
-    );
+    const isLocal = API_BASE_URL.includes("localhost") || API_BASE_URL.includes("127.0.0.1");
+    throw new Error(isLocal
+      ? "The local backend is not running. Start it with: npm --prefix backend run start:dev"
+      : "Unable to reach the deployed authentication server. Verify the backend deployment and API URL.");
   }
   const result = await response.json().catch(() => ({}));
   if (response.status === 404 && path === "/auth/google") {
