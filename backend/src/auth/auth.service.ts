@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  HttpException,
+  InternalServerErrorException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -157,30 +159,45 @@ export class AuthService {
       throw new UnauthorizedException('Google account could not be verified.');
     }
     const email = profile.email.toLowerCase();
-    const googleUser = await this.userRepository.findOne({ where: { googleId: profile.sub } });
-    const emailUser = await this.userRepository.findOne({ where: { email } });
-    if (googleUser && emailUser && googleUser.id !== emailUser.id) {
-      throw new ConflictException('This Google account and email belong to different user records.');
-    }
-    let user = googleUser || emailUser;
-    if (!user) {
-      user = this.userRepository.create({
-        email,
-        name: profile.name || 'Google user',
-        password: hashPassword(randomBytes(32).toString('hex')),
-        googleId: profile.sub,
-        isVerified: true,
-        isActive: true,
-      });
-    } else {
-      user.googleId = profile.sub;
+    try {
+      const googleUser = await this.userRepository.findOne({ where: { googleId: profile.sub } });
+      const emailUser = await this.userRepository.findOne({ where: { email } });
+      if (googleUser && emailUser && googleUser.id !== emailUser.id) {
+        throw new ConflictException('This Google account and email belong to different user records.');
+      }
+      let user = googleUser || emailUser;
+      if (!user) {
+        user = this.userRepository.create({
+          email,
+          name: profile.name || 'Google user',
+          password: hashPassword(randomBytes(32).toString('hex')),
+          googleId: profile.sub,
+          isVerified: true,
+          isActive: true,
+        });
+      } else {
+        user.googleId = profile.sub;
+        user.isVerified = true;
+        if (profile.name && !user.name) user.name = profile.name;
+      }
       user.isVerified = true;
-      if (profile.name && !user.name) user.name = profile.name;
+      const saved = await this.userRepository.save(user);
+      const responseUser = await this.formatUser(saved);
+      return { message: 'Welcome back!', user: responseUser, token: this.signUserToken(saved) };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Google user synchronization failed: ${message}`);
+      if (/column .* does not exist|relation .* does not exist/i.test(message)) {
+        throw new InternalServerErrorException(
+          'The database is missing the Google authentication columns. Apply database/migrations/001-auth-bookings.sql and redeploy.',
+        );
+      }
+      if ((error as { code?: string }).code === '23505') {
+        throw new ConflictException('This Google email or account is already linked to another user.');
+      }
+      throw new InternalServerErrorException('Unable to save your Google profile. Please try again.');
     }
-    user.isVerified = true;
-    const saved = await this.userRepository.save(user);
-    const responseUser = await this.formatUser(saved);
-    return { message: 'Welcome back!', user: responseUser, token: this.signUserToken(saved) };
   }
 
   async createAdmin(dto: CreateAdminDto, setupKey: string | undefined) {
