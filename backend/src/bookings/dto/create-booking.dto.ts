@@ -47,10 +47,10 @@ export class CreateBookingDto {
   @MaxLength(100)
   name: string;
 
-  @ApiProperty({ example: '+977 9863027467', minLength: 7, maxLength: 30 })
+  @ApiProperty({ example: '9863027467', minLength: 10, maxLength: 10 })
   @IsString()
-  @MinLength(7)
-  @MaxLength(30)
+  @Matches(/^\d{10}$/, { message: 'Phone number must contain exactly 10 digits.' })
+  @MaxLength(10)
   phone: string;
 
   @ApiProperty({ required: false, example: 'hello@example.com' })

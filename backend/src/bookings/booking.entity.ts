@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -17,6 +18,10 @@ export enum BookingStatus {
 }
 
 @Entity({ name: 'bookings' })
+@Index('bookings_one_active_per_user', ['user'], {
+  unique: true,
+  where: `"status" IN ('pending', 'confirmed')`,
+})
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id: string;

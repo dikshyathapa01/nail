@@ -83,6 +83,26 @@ export class BookingsService {
     const user = await this.userRepository.findOne({ where: { id: booking.userId } });
     if (!user) throw new ConflictException('Authenticated Google account was not found.');
 
+    const normalizedPhone = booking.phone.trim();
+    if (user.phone && user.phone !== normalizedPhone) {
+      throw new ConflictException('This account already has a phone number saved. Use the same number.');
+    }
+
+    const existingBooking = await this.bookingRepository.findOne({
+      where: [
+        { user: { id: user.id }, status: BookingStatus.PENDING },
+        { user: { id: user.id }, status: BookingStatus.CONFIRMED },
+      ],
+    });
+    if (existingBooking) {
+      throw new ConflictException('You can have only one active appointment at a time.');
+    }
+
+    if (!user.phone) {
+      user.phone = normalizedPhone;
+      await this.userRepository.save(user);
+    }
+
     const entity = this.bookingRepository.create({
       user,
       service: booking.service,
@@ -92,7 +112,7 @@ export class BookingsService {
       status: BookingStatus.PENDING,
       details: booking.details || booking.notes || null,
       name: booking.name,
-      phone: booking.phone || null,
+      phone: normalizedPhone,
       email: booking.email || null,
       notes: booking.notes || booking.details || null,
     });
@@ -108,6 +128,9 @@ export class BookingsService {
       });
     } catch (error) {
       if ((error as { code?: string }).code === '23505') {
+        if ((error as { constraint?: string }).constraint === 'bookings_one_active_per_user') {
+          throw new ConflictException('You can have only one active appointment at a time.');
+        }
         throw new ConflictException(
           'That time is already requested. Please choose another slot.',
         );

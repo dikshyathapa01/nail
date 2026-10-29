@@ -135,9 +135,14 @@ export default function BookingForm({ date, time, onSuccess }) {
           <input
             {...register("phone", {
               required: "Your phone number is required",
-              minLength: { value: 7, message: "Please enter a valid phone number" },
+              pattern: {
+                value: /^\d{10}$/,
+                message: "Enter exactly 10 digits",
+              },
             })}
-            placeholder="+977 98..."
+            maxLength={10}
+            inputMode="numeric"
+            placeholder="98XXXXXXXX"
           />
           {errors.phone && <small className="form-error">{errors.phone.message}</small>}
         </label>
