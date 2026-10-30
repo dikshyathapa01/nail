@@ -87,6 +87,16 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
 
       const result = await res.json().catch(() => ({}));
       const message = Array.isArray(result.message) ? result.message.join(", ") : result.message;
+      if (res.status === 401) {
+        openAuthModal({
+          mode: "login",
+          message: "Your sign-in session expired. Sign in again to confirm this booking.",
+          onSuccess: (sessionUser) => {
+            doSubmit(values, sessionUser?.token);
+          },
+        });
+        return;
+      }
       if (res.status === 409 && /already requested|unavailable/i.test(message || "")) {
         onSlotUnavailable?.();
         setSubmitError("That slot was just taken. Please choose another available time.");
