@@ -247,18 +247,129 @@ export default function Admin({ initialTab = "overview" }) {
 
         {(tab === "overview" || tab === "services") && (
           <section className="admin-management-card editorial-frosted-card">
-            <div className="admin-card-heading"><Scissors size={20} /><div><h2>Add a studio service</h2><p>New services appear on the public services page.</p></div></div>
+            <div className="admin-card-heading">
+              <Scissors size={20} />
+              <div>
+                <h2>{editingServiceId ? "Edit studio service" : "Add a studio service"}</h2>
+                <p>New services appear on the public services page.</p>
+              </div>
+            </div>
             <form className="admin-service-form" onSubmit={addService}>
-              <input placeholder="Service name" value={serviceForm.name} onChange={(event) => setServiceForm({ ...serviceForm, name: event.target.value })} required />
-              <select value={category} onChange={(event) => setCategory(event.target.value)} required>{categories.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select>
-              <input placeholder="Duration (e.g. 60 mins)" value={serviceForm.duration} onChange={(event) => setServiceForm({ ...serviceForm, duration: event.target.value })} required />
-              <input type="number" min="0" step="0.01" placeholder="Price" value={serviceForm.price} onChange={(event) => setServiceForm({ ...serviceForm, price: event.target.value })} required />
-              <textarea placeholder="Description" value={serviceForm.description} onChange={(event) => setServiceForm({ ...serviceForm, description: event.target.value })} required />
-              <input placeholder="Image URL (optional)" value={serviceImageUrl} onChange={(event) => { setServiceImageUrl(event.target.value); setServiceForm({ ...serviceForm, imageUrl: event.target.value }); }} />
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setServiceFile(event.target.files?.[0] || null)} />
-              <button className="dark-button" disabled={loading}><Plus size={15} /> {editingServiceId ? "Update service" : "Add service"}</button>
+              <label>
+                <span>Service name</span>
+                <input
+                  placeholder="e.g. French BIAB & Nail Art"
+                  value={serviceForm.name}
+                  onChange={(event) => setServiceForm({ ...serviceForm, name: event.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                <span>Category</span>
+                <select
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                  required
+                >
+                  {categories.map((item) => (
+                    <option key={item.id || item.name} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Duration</span>
+                <input
+                  placeholder="e.g. 60 mins"
+                  value={serviceForm.duration}
+                  onChange={(event) => setServiceForm({ ...serviceForm, duration: event.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                <span>Price (Rs.)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 1500"
+                  value={serviceForm.price}
+                  onChange={(event) => setServiceForm({ ...serviceForm, price: event.target.value })}
+                  required
+                />
+              </label>
+              <label className="admin-field-full">
+                <span>Description</span>
+                <textarea
+                  placeholder="Describe what's included in this service, technique used, etc."
+                  value={serviceForm.description}
+                  onChange={(event) => setServiceForm({ ...serviceForm, description: event.target.value })}
+                  required
+                />
+              </label>
+              <label>
+                <span>Image URL (optional)</span>
+                <input
+                  placeholder="https://images.unsplash.com/..."
+                  value={serviceImageUrl}
+                  onChange={(event) => {
+                    setServiceImageUrl(event.target.value);
+                    setServiceForm({ ...serviceForm, imageUrl: event.target.value });
+                  }}
+                />
+              </label>
+              <label className="admin-file-field">
+                <span>Or upload photo</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={(event) => setServiceFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              <div className="admin-service-form-actions">
+                <button type="submit" className="dark-button admin-submit-btn" disabled={loading}>
+                  <Plus size={16} /> {editingServiceId ? "Update service" : "Add service"}
+                </button>
+                {editingServiceId && (
+                  <button
+                    type="button"
+                    className="light-button admin-cancel-btn"
+                    onClick={() => {
+                      setEditingServiceId(null);
+                      setServiceForm({ name: "", duration: "", description: "", price: "" });
+                      setServiceImageUrl("");
+                      setServiceFile(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
-            <div className="admin-service-list">{services.map((item) => <div key={item.id}><div><strong>{item.name}</strong><small>{item.category} · {item.duration} · {item.price}</small></div><span><button type="button" onClick={() => editService(item)}>Edit</button><button type="button" onClick={() => remove(`${API_BASE_URL}/services/${item.id}`, "Service removed.")}><Trash2 size={15} /></button></span></div>)}</div>
+            <div className="admin-service-list">
+              {services.map((item) => (
+                <div key={item.id}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <small>{item.category} · {item.duration} · Rs. {item.price}</small>
+                  </div>
+                  <div className="admin-service-actions">
+                    <button type="button" className="admin-edit-btn" onClick={() => editService(item)}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-delete-btn"
+                      title="Delete service"
+                      onClick={() => remove(`${API_BASE_URL}/services/${item.id}`, "Service removed.")}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
             <div className="admin-card-heading" style={{ marginTop: "30px" }}><Plus size={20} /><div><h2>Service categories</h2><p>These categories appear on the public services and portfolio pages.</p></div></div>
             <form className="admin-inline-form" onSubmit={addCategory}><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} placeholder="e.g. Luxury nail art" required /><button className="dark-button" disabled={loading}>Add category</button></form>
             <div className="admin-category-list">{categories.map((item) => <div key={item.id || item.name}><span>{item.name}</span>{item.id && <button type="button" onClick={() => remove(`${API_BASE_URL}/categories/${item.id}`, "Category removed.")}><Trash2 size={15} /></button>}</div>)}</div>
