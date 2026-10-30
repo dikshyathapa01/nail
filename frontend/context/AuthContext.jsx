@@ -56,6 +56,7 @@ async function requestAuth(path, payload) {
 export function AuthProvider({ children }) {
   const channelRef = useRef(null);
   const socketRef = useRef(null);
+  const refreshedTokenRef = useRef(null);
   const [syncVersion, setSyncVersion] = useState(0);
   const [user, setUser] = useState(() => {
     try {
@@ -66,6 +67,38 @@ export function AuthProvider({ children }) {
     }
     return readSessionUser();
   });
+
+  useEffect(() => {
+    if (!user?.token) return undefined;
+    if (refreshedTokenRef.current === user.token) return undefined;
+    refreshedTokenRef.current = user.token;
+    let active = true;
+
+    fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: user.token }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Session refresh failed.");
+        return response.json();
+      })
+      .then((result) => {
+        if (!active || !result.user || !result.token) return;
+        const refreshedUser = { ...result.user, token: result.token };
+        setUser(refreshedUser);
+        sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(refreshedUser));
+      })
+      .catch(() => {
+        if (!active) return;
+        setUser(null);
+        sessionStorage.removeItem(STORAGE_KEY_USER);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.token]);
 
   // Auth modal state
   const [authModal, setAuthModal] = useState({

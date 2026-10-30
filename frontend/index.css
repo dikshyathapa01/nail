@@ -3253,3 +3253,136 @@ button,
     width: fit-content;
   }
 }
+
+@media (max-width: 640px) {
+  .shell,
+  .curated-hero-grid,
+  .admin-dashboard {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+
+  .nav-inner {
+    width: calc(100% - 24px);
+    gap: 12px;
+  }
+
+  .brand-editorial .brand-text {
+    font-size: 23px;
+  }
+
+  .mobile-nav {
+    padding: 18px 12px 24px;
+  }
+
+  .mobile-nav-links,
+  .mobile-nav-actions,
+  .mobile-user-card,
+  .mobile-auth-row {
+    min-width: 0;
+  }
+
+  .mobile-user-info {
+    min-width: 0;
+  }
+
+  .mobile-user-info > div {
+    min-width: 0;
+  }
+
+  .mobile-user-info strong,
+  .mobile-user-info small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .curated-hero-copy > div,
+  .banner-actions,
+  .portfolio-cta-actions {
+    flex-wrap: wrap !important;
+  }
+
+  .curated-hero-copy > div > *,
+  .banner-actions > *,
+  .portfolio-cta-actions > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .curated-hero-copy .dark-button,
+  .curated-hero-copy .explore-pill-btn {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .section-intro,
+  .portfolio-header-links,
+  .portfolio-cta-card,
+  .admin-dashboard-header {
+    min-width: 0;
+  }
+
+  .section-intro h2,
+  .page-heading h1,
+  .portfolio-cta-card h2 {
+    overflow-wrap: anywhere;
+  }
+
+  .service-cards,
+  .why-grid,
+  .booking-layout,
+  .contact-layout,
+  .banner-editorial-card,
+  .admin-section-grid {
+    min-width: 0;
+  }
+
+  .service-card,
+  .why-grid article,
+  .calendar-card,
+  .form-panel,
+  .contact-details,
+  .contact-form,
+  .banner-editorial-card,
+  .portfolio-cta-card,
+  .admin-upload-card,
+  .admin-saved,
+  .admin-management-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .service-category-badge,
+  .service-card-body h3,
+  .service-card-body p {
+    overflow-wrap: anywhere;
+  }
+
+  .services-insta-banner {
+    display: flex;
+    max-width: 100%;
+    border-radius: var(--radius-lg);
+    line-height: 1.45;
+  }
+
+  .booking-summary {
+    min-width: 0;
+  }
+
+  .booking-summary span,
+  .booking-summary b {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .toast {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    justify-content: center;
+    border-radius: var(--radius-lg);
+    text-align: center;
+  }
+}
