@@ -9,7 +9,7 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export default function BookingCalendar({ value, onChange, selectedTime, onTimeChange }) {
+export default function BookingCalendar({ value, onChange, selectedTime, onTimeChange, refreshKey = 0 }) {
   const [month, setMonth] = useState(() => new Date());
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,7 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [value]);
+  }, [value, refreshKey]);
 
   const chooseDay = (day) => {
     const date = new Date(year, monthIndex, day);

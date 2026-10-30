@@ -19,6 +19,7 @@ export default function Booking() {
   const [step, setStep] = useState(1);
   const [toast, setToast] = useState("");
   const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
   const { user, setMyBookingsOpen } = useAuth();
 
@@ -156,6 +157,7 @@ export default function Booking() {
                     onChange={setDate}
                     selectedTime={time}
                     onTimeChange={setTime}
+                    refreshKey={availabilityRefreshKey}
                   />
                   <div className="legend">
                     <span><i className="available-dot" /> Available</span>
@@ -232,6 +234,7 @@ export default function Booking() {
                     onChange={(d) => { setDate(d); setTime(""); setStep(1); }}
                     selectedTime={time}
                     onTimeChange={(t) => { setTime(t); }}
+                    refreshKey={availabilityRefreshKey}
                   />
                   <div className="legend">
                     <span><i className="available-dot" /> Available</span>
@@ -256,7 +259,16 @@ export default function Booking() {
                   <div className="panel-icon-badge"><Sparkles size={18} /></div>
                 </div>
 
-                <BookingForm date={date} time={time} onSuccess={handleSuccess} />
+                <BookingForm
+                  date={date}
+                  time={time}
+                  onSuccess={handleSuccess}
+                  onSlotUnavailable={() => {
+                    setTime("");
+                    setAvailabilityRefreshKey((key) => key + 1);
+                    setStep(1);
+                  }}
+                />
               </motion.div>
             </motion.div>
           )}

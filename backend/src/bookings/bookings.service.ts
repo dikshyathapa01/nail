@@ -207,10 +207,15 @@ export class BookingsService {
   }
 
   async list(userId?: string, email?: string) {
-    const where = userId || email
+    const where = userId
       ? [
-          ...(userId ? [{ user: { id: userId } }] : []),
-          ...(email ? [{ email: ILike(email) }] : []),
+          { user: { id: userId }, status: BookingStatus.PENDING },
+          { user: { id: userId }, status: BookingStatus.CONFIRMED },
+          { user: { id: userId }, status: BookingStatus.COMPLETED },
+        ]
+      : email
+      ? [
+          { email: ILike(email) },
         ]
       : undefined;
 

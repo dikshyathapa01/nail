@@ -37,7 +37,7 @@ export default function MyBookingsModal() {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Unable to cancel appointment.");
-      setBookings((current) => current.map((booking) => booking.id === id ? result : booking));
+      setBookings((current) => current.filter((booking) => booking.id !== id));
     } catch (err) { setError(err.message); } finally { setBusyId(""); }
   };
 

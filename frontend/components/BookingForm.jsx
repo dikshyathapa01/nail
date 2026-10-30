@@ -8,7 +8,7 @@ import { API_BASE_URL } from "../api";
 import { useAuth } from "../context/useAuth";
 import { validateEmail } from "../utils/emailValidator";
 
-export default function BookingForm({ date, time, onSuccess }) {
+export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }) {
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const [submitError, setSubmitError] = useState("");
   const [searchParams] = useSearchParams();
@@ -78,7 +78,13 @@ export default function BookingForm({ date, time, onSuccess }) {
       }
 
       const result = await res.json().catch(() => ({}));
-      setSubmitError(result.message || "Unable to confirm booking.");
+      const message = Array.isArray(result.message) ? result.message.join(", ") : result.message;
+      if (res.status === 409 && /already requested|unavailable/i.test(message || "")) {
+        onSlotUnavailable?.();
+        setSubmitError("That slot was just taken. Please choose another available time.");
+        return;
+      }
+      setSubmitError(message || "Unable to confirm booking.");
       return;
     } catch (error) {
       if (!(error instanceof TypeError)) {
