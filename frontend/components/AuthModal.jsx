@@ -22,12 +22,13 @@ export default function AuthModal() {
         login_uri: `${window.location.origin}/api/auth/google/callback`,
       });
       googleButtonRef.current.replaceChildren();
+      const buttonWidth = Math.min(360, Math.max(200, googleButtonRef.current.clientWidth));
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         theme: "outline",
         size: "large",
         text: "continue_with",
         locale: "en",
-        width: 360,
+        width: buttonWidth,
       });
     };
 

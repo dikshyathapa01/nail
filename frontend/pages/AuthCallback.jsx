@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 
@@ -7,6 +7,7 @@ export default function AuthCallback() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
+  const submittedCredentialRef = useRef("");
 
   useEffect(() => {
     let active = true;
@@ -21,6 +22,8 @@ export default function AuthCallback() {
       setError("Google sign-in did not return a credential.");
       return undefined;
     }
+    if (submittedCredentialRef.current === credential) return undefined;
+    submittedCredentialRef.current = credential;
 
     loginWithGoogle(credential)
       .then(() => {

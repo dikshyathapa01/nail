@@ -19,25 +19,16 @@ export class AuthController {
   }
 
   @Post('google/callback')
-  async googleRedirectCallback(@Body() dto: GoogleLoginDto, @Res() response: Response) {
+  googleRedirectCallback(@Body() dto: GoogleLoginDto, @Res() response: Response) {
     const configuredFrontendUrl = process.env.FRONTEND_URL?.trim();
     const frontendUrl = configuredFrontendUrl &&
       !(process.env.NODE_ENV === 'production' && /localhost|127\.0\.0\.1/.test(configuredFrontendUrl))
       ? configuredFrontendUrl
       : 'https://nail-gilt.vercel.app';
-    try {
-      await this.authService.loginWithGoogle(dto.credential, dto.deviceId);
-      const credential = encodeURIComponent(dto.credential);
-      return response.redirect(
-        `${frontendUrl}/auth/callback#credential=${credential}`,
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Google sign-in failed.';
-      return response.redirect(
-        `${frontendUrl}/auth/callback?error=${encodeURIComponent(message)}`,
-      );
-    }
-
+    const credential = encodeURIComponent(dto.credential);
+    return response.redirect(
+      `${frontendUrl}/auth/callback#credential=${credential}`,
+    );
   }
 
   @Post('logout')

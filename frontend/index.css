@@ -2407,6 +2407,16 @@ html, body { max-width: 100vw; overflow-x: hidden; }
   backdrop-filter: blur(20px);
 }
 .auth-modal--wide { max-width: 560px; }
+.google-login-button {
+  width: 100%;
+  max-width: 360px;
+  margin-inline: auto;
+  overflow: hidden;
+}
+.google-login-button > div,
+.google-login-button iframe {
+  max-width: 100%;
+}
 
 .auth-modal-close {
   position: absolute; top: 16px; right: 16px;
@@ -3230,6 +3240,23 @@ button,
   }
 }
 
+@media (max-width: 900px) {
+  .booking-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .booking-layout .step1-hint-panel {
+    display: none;
+  }
+
+  .calendar-wrapper-col,
+  .booking-layout .form-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 380px) {
   .admin-dashboard {
     width: calc(100% - 20px);
@@ -3384,5 +3411,15 @@ button,
     justify-content: center;
     border-radius: var(--radius-lg);
     text-align: center;
+  }
+
+  .auth-modal {
+    width: calc(100vw - 20px);
+    max-width: 440px;
+    padding-inline: 16px;
+  }
+
+  .google-login-button {
+    max-width: 100%;
   }
 }

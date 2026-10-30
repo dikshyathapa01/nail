@@ -134,6 +134,7 @@ export function AuthProvider({ children }) {
       result = await requestAuth("/auth/google", { credential });
     }
     const sessionUser = { ...result.user, token: result.token || "" };
+    refreshedTokenRef.current = sessionUser.token;
     setUser(sessionUser);
     sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
     channelRef.current?.postMessage({ type: "auth", user: sessionUser });
