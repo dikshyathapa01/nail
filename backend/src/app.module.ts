@@ -21,6 +21,7 @@ import { CreateUserSessions1710000000001 } from './database/migrations/171000000
 import { EnsureUserSessions1710000000002 } from './database/migrations/1710000000002-EnsureUserSessions';
 import { EnsureActiveBookingSlotUnique1710000000003 } from './database/migrations/1710000000003-EnsureActiveBookingSlotUnique';
 import { AddUserRoles1710000000004 } from './database/migrations/1710000000004-AddUserRoles';
+import { AddBookingHolds1710000000005 } from './database/migrations/1710000000005-AddBookingHolds';
 
 config({ path: join(__dirname, '..', '.env') });
 
@@ -47,6 +48,7 @@ config({ path: join(__dirname, '..', '.env') });
         EnsureUserSessions1710000000002,
         EnsureActiveBookingSlotUnique1710000000003,
         AddUserRoles1710000000004,
+        AddBookingHolds1710000000005,
       ],
       migrationsRun: true,
     }),

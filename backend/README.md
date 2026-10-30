@@ -12,6 +12,13 @@ The API runs on `http://localhost:5000` (the port configured in the workspace `.
 - `POST /api/bookings` creates a booking request.
 - `GET /api/bookings/availability?date=2026-09-07` returns the four studio time slots and their availability.
 
+Booking requests are created as `pending` holds for 10 minutes. Availability responses
+label held slots as `pending`; expired holds are marked `rejected` when the API next
+processes bookings, availability, or admin listings. Confirming one request
+transactionally rejects other pending or waitlisted requests for the same date and
+time. PostgreSQL's unique active-slot index is the final protection against
+simultaneous writes.
+
 Requests are validated and stored in PostgreSQL using the `DATABASE_URL` from the workspace `.env` file. The `bookings` table is created automatically when the API starts.
 
 ## Transactional booking email

@@ -118,14 +118,14 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
               <button
                 key={slot.time}
                 disabled={!slot.available}
-                className={`${selectedTime === slot.time ? "selected" : ""} ${slot.available ? "available" : "booked"}`}
+                className={`${selectedTime === slot.time ? "selected" : ""} ${slot.available ? "available" : slot.status === "pending" ? "pending" : "booked"}`}
                 onClick={() => onTimeChange(slot.time)}
               >
                 <span className="slot-inner">
                   <span className="slot-dot" />
                   <span className="slot-text">
                     {slot.time}
-                    <small>{slot.available ? "Available" : availabilityError ? "Unavailable" : "Booked"}</small>
+                    <small>{slot.available ? "Available" : availabilityError ? "Unavailable" : slot.status === "pending" ? "Pending" : "Booked"}</small>
                   </span>
                 </span>
               </button>

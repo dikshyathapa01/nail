@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
+import { LessThanOrEqual } from 'typeorm';
 import { DataSource } from 'typeorm';
 import { Booking, BookingStatus } from './booking.entity';
 import { AvailabilityBlock } from './availability-block.entity';
@@ -22,6 +23,7 @@ import { UserSyncGateway } from '../realtime/user-sync.gateway';
 @Injectable()
 export class BookingsService {
   private readonly logger = new Logger(BookingsService.name);
+  private readonly holdDurationMs = 10 * 60 * 1000;
 
   constructor(
     @InjectRepository(Booking)
@@ -49,6 +51,7 @@ export class BookingsService {
       details: booking.details || booking.notes,
       userId: booking.user?.id || booking.userId || null,
       status: booking.status,
+      holdExpiresAt: booking.holdExpiresAt?.toISOString() || null,
       createdAt: booking.createdAt?.toISOString(),
     };
   }
@@ -90,6 +93,7 @@ export class BookingsService {
       throw new ConflictException('This account already has a phone number saved. Use the same number.');
     }
 
+    await this.expirePendingHolds();
     const existingBooking = await this.bookingRepository.findOne({
       where: [
         { user: { id: user.id }, status: BookingStatus.PENDING },
@@ -112,6 +116,7 @@ export class BookingsService {
       bookingDate,
       time: booking.time,
       status: BookingStatus.PENDING,
+      holdExpiresAt: new Date(Date.now() + this.holdDurationMs),
       details: booking.details || booking.notes || null,
       name: booking.name,
       phone: normalizedPhone,
@@ -122,6 +127,22 @@ export class BookingsService {
     let savedBooking: Booking;
     try {
       savedBooking = await this.dataSource.transaction(async (manager) => {
+        await manager.query(
+          `SELECT id FROM "bookings"
+           WHERE COALESCE("date", "booking_date") = $1
+             AND "time" = $2
+             AND "status" IN ('pending', 'confirmed')
+           FOR UPDATE`,
+          [bookingDate, booking.time],
+        );
+        await manager
+          .createQueryBuilder()
+          .update(Booking)
+          .set({ status: BookingStatus.REJECTED, holdExpiresAt: null })
+          .where(`"status" = :status AND "hold_expires_at" <= NOW()`, {
+            status: BookingStatus.PENDING,
+          })
+          .execute();
         const blocked = await manager.find(AvailabilityBlock, { where: { date: bookingDate } });
         if (blocked.some((item) => item.time === 'FULL_DAY' || item.time === booking.time)) {
           throw new ConflictException('That date or time is unavailable. Please choose another slot.');
@@ -165,10 +186,15 @@ export class BookingsService {
   }
 
   async getAvailability(date: string) {
-    const activeBookings = await this.bookingRepository.find({
-      where: [{ date, status: BookingStatus.PENDING }, { date, status: BookingStatus.CONFIRMED }],
-    });
-    const bookedTimes = new Set(activeBookings.map((booking) => booking.time));
+    await this.expirePendingHolds();
+    const activeBookings = await this.bookingRepository
+      .createQueryBuilder('booking')
+      .where(`COALESCE(booking.date, booking.bookingDate) = :date`, { date })
+      .andWhere(`booking.status IN (:...statuses)`, {
+        statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+      })
+      .getMany();
+    const bookedTimes = new Map(activeBookings.map((booking) => [booking.time, booking.status]));
     const blocks = await this.availabilityBlockRepository.find({ where: { date } });
     const fullDayBlocked = blocks.some((block) => block.time === 'FULL_DAY');
     const blockedTimes = new Set(blocks.map((block) => block.time));
@@ -184,9 +210,27 @@ export class BookingsService {
       slots: BOOKING_TIMES.map((time) => {
         const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
         const hasStarted = date === today && currentMinutes >= hours * 60 + minutes;
-        return { time, available: !fullDayBlocked && !blockedTimes.has(time) && !bookedTimes.has(time) && !hasStarted };
+        const status = bookedTimes.get(time);
+        return {
+          time,
+          available: !fullDayBlocked && !blockedTimes.has(time) && !status && !hasStarted,
+          status: status || BookingStatus.AVAILABLE,
+        };
       }),
     };
+  }
+
+  private async expirePendingHolds() {
+    await this.bookingRepository.update(
+      {
+        status: BookingStatus.PENDING,
+        holdExpiresAt: LessThanOrEqual(new Date()),
+      },
+      {
+        status: BookingStatus.REJECTED,
+        holdExpiresAt: null,
+      },
+    );
   }
 
   listAvailabilityBlocks() {
@@ -207,6 +251,7 @@ export class BookingsService {
   }
 
   async list(userId?: string, email?: string) {
+    await this.expirePendingHolds();
     const where = userId
       ? [
           { user: { id: userId }, status: BookingStatus.PENDING },
@@ -228,12 +273,48 @@ export class BookingsService {
   }
 
   async updateStatus(id: string, status: BookingStatus) {
-    const booking = await this.bookingRepository.findOne({ where: { id }, relations: { user: true } });
-    if (!booking) throw new ConflictException('Appointment not found.');
-    booking.status = status;
-    const response = this.toResponse(await this.bookingRepository.save(booking));
-    if (booking.userId) {
-      this.userSyncGateway.emitUserEvent(booking.userId, 'booking:updated', { action: 'status', booking: response });
+    await this.expirePendingHolds();
+    let savedBooking: Booking;
+    try {
+      savedBooking = await this.dataSource.transaction(async (manager) => {
+        const booking = await manager.findOne(Booking, {
+          where: { id },
+          relations: { user: true },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!booking) throw new ConflictException('Appointment not found.');
+        const bookingDate = booking.date || booking.bookingDate;
+        if (status === BookingStatus.CONFIRMED && bookingDate) {
+          await manager
+            .createQueryBuilder()
+            .update(Booking)
+            .set({ status: BookingStatus.REJECTED, holdExpiresAt: null })
+            .where(`id <> :id
+              AND COALESCE("date", "booking_date") = :date
+              AND "time" = :time
+              AND "status" IN (:...statuses)`, {
+              id,
+              date: bookingDate,
+              time: booking.time,
+              statuses: [BookingStatus.PENDING, BookingStatus.WAITLISTED],
+            })
+            .execute();
+        }
+        booking.status = status;
+        booking.holdExpiresAt = status === BookingStatus.PENDING
+          ? new Date(Date.now() + this.holdDurationMs)
+          : null;
+        return manager.save(booking);
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        throw new ConflictException('That time is already confirmed by another appointment.');
+      }
+      throw error;
+    }
+    const response = this.toResponse(savedBooking);
+    if (savedBooking.userId) {
+      this.userSyncGateway.emitUserEvent(savedBooking.userId, 'booking:updated', { action: 'status', booking: response });
     }
     if (status === BookingStatus.CONFIRMED || status === BookingStatus.CANCELLED || status === BookingStatus.COMPLETED) {
       try {
@@ -264,7 +345,12 @@ export class BookingsService {
     try {
       const saved = await this.dataSource.transaction(async (manager) => {
         const conflict = await manager.findOne(Booking, {
-          where: [{ date, time, status: BookingStatus.PENDING }, { date, time, status: BookingStatus.CONFIRMED }],
+          where: [
+            { date, time, status: BookingStatus.PENDING },
+            { date, time, status: BookingStatus.CONFIRMED },
+            { bookingDate: date, time, status: BookingStatus.PENDING },
+            { bookingDate: date, time, status: BookingStatus.CONFIRMED },
+          ],
         });
         if (conflict && conflict.id !== id) throw new ConflictException('That time is already requested.');
         const blocks = await manager.find(AvailabilityBlock, { where: { date } });
@@ -275,6 +361,7 @@ export class BookingsService {
         booking.date = date;
         booking.bookingDate = date;
         booking.time = time;
+        booking.holdExpiresAt = new Date(Date.now() + this.holdDurationMs);
         if (dto.notes !== undefined) {
           booking.notes = dto.notes;
           booking.details = dto.notes;
@@ -295,6 +382,7 @@ export class BookingsService {
     if (!booking || booking.userId !== userId) throw new ConflictException('Appointment not found.');
     this.assertChangeable(booking);
     booking.status = BookingStatus.CANCELLED;
+    booking.holdExpiresAt = null;
     const response = this.toResponse(await this.bookingRepository.save(booking));
     if (booking.userId) {
       this.userSyncGateway.emitUserEvent(booking.userId, 'booking:updated', { action: 'status', booking: response });

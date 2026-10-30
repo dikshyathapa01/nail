@@ -11,18 +11,17 @@ import {
 import { User } from '../auth/user.entity';
 
 export enum BookingStatus {
+  AVAILABLE = 'available',
   PENDING = 'pending',
   CONFIRMED = 'confirmed',
+  REJECTED = 'rejected',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+  WAITLISTED = 'waitlisted',
 }
 
 @Entity({ name: 'bookings' })
 @Index('bookings_one_active_per_user', ['user'], {
-  unique: true,
-  where: `"status" IN ('pending', 'confirmed')`,
-})
-@Index('bookings_one_active_per_slot', ['date', 'time'], {
   unique: true,
   where: `"status" IN ('pending', 'confirmed')`,
 })
@@ -51,6 +50,9 @@ export class Booking {
 
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
   status: BookingStatus;
+
+  @Column({ name: 'hold_expires_at', type: 'timestamptz', nullable: true })
+  holdExpiresAt?: Date | null;
 
   @Column({ type: 'varchar', length: 300, nullable: true })
   details?: string | null;

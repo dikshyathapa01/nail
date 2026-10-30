@@ -744,6 +744,8 @@ h2 em {
 .status-pending { color: #92400e; background: #fef3c7; }
 .status-confirmed { color: #166534; background: #dcfce7; }
 .status-cancelled { color: #991b1b; background: #fee2e2; }
+.status-rejected { color: #991b1b; background: #fee2e2; }
+.status-waitlisted { color: #1d4ed8; background: #dbeafe; }
 @media (max-width: 700px) { .admin-form-grid, .admin-photo-grid { grid-template-columns: 1fr 1fr; } .admin-upload-card { padding: 20px; } }
 @media (max-width: 800px) { .admin-dashboard-header, .admin-section-grid { display: block; } .admin-notification-card { margin-top: 24px; width: fit-content; } .admin-saved { margin-top: 24px; } }
 @media (max-width: 600px) { .admin-service-form { grid-template-columns: 1fr; } .admin-service-form textarea { grid-column: auto; } }
@@ -787,6 +789,12 @@ h2 em {
 .slots button.available:hover {
   background: #c8e6c9;
   border-color: #388e3c;
+}
+
+.slots button.pending {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #f59e0b;
 }
 
 /* Inner layout: dot + text stacked */

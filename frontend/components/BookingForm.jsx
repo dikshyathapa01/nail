@@ -44,7 +44,7 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
     }
   }, [user, setValue]);
 
-  const doSubmit = async (values) => {
+  const doSubmit = async (values, sessionToken = user?.token) => {
     setSubmitError("");
 
     const minimumDate = new Date();
@@ -64,9 +64,17 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
     const payload = { ...values, date, time };
 
     try {
+      if (!sessionToken) {
+        setSubmitError("Your sign-in session is not ready yet. Please try again.");
+        return;
+      }
+
       const res = await fetch(`${API_BASE_URL}/appointments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -102,9 +110,9 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
       openAuthModal({
         mode: "login",
         message: `Sign in to finalise your booking for ${values.service || "your session"} on ${date}.`,
-        onSuccess: () => {
+        onSuccess: (sessionUser) => {
           // After login the form still has data; re-trigger submit programmatically
-          doSubmit(values);
+          doSubmit(values, sessionUser?.token);
         },
       });
       return;
