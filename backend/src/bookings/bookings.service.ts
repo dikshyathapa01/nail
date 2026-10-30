@@ -194,9 +194,9 @@ export class BookingsService {
     const activeBookings = await this.dataSource.query(
       `SELECT "time", "status"
        FROM "bookings"
-       WHERE ("date" = $1 OR "booking_date" = $1)
-         AND "status" IN ($2, $3)`,
-      [date, BookingStatus.PENDING, BookingStatus.CONFIRMED],
+       WHERE (CAST("date" AS text) = $1 OR CAST("booking_date" AS text) = $1)
+         AND LOWER(CAST("status" AS text)) IN ('pending', 'confirmed')`,
+      [date],
     ) as Array<{ time: string; status: BookingStatus }>;
     const bookedTimes = new Map(
       activeBookings.map((booking) => [
