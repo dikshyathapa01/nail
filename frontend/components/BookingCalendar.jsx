@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import { BOOKING_TIMES } from "../data";
 import { API_BASE_URL } from "../api";
 
 const formatDate = (date) => {
@@ -31,21 +30,27 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
     setSlots([]);
     setAvailabilityError("");
 
-    fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(value)}`)
+    const controller = new AbortController();
+
+    fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(value)}`, {
+      signal: controller.signal,
+    })
       .then((r) => {
         if (!r.ok) throw new Error("Unavailable");
         return r.json();
       })
       .then((data) => {
-        setSlots(data.slots && data.slots.length ? data.slots : BOOKING_TIMES.map((time) => ({ time, available: true })));
+        setSlots(data.slots || []);
       })
       .catch((err) => {
+        if (err.name === "AbortError") return;
         console.error("API error details:", err);
-        setAvailabilityError(err.message || "Availability could not be checked. Please click again.");
-
-        setSlots(BOOKING_TIMES.map((time) => ({ time, available: true })));
+        setAvailabilityError("Availability could not be checked. Please try again.");
+        setSlots([]);
       })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [value]);
 
   const chooseDay = (day) => {

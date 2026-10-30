@@ -13,7 +13,7 @@ export default function Services() {
   const [categories, setCategories] = useState(["All", "Press-Ons", "Nail Art", "Gel & Extensions", "Acrylics"]);
   const [dynamicServices, setDynamicServices] = useState([]);
   const { user, adminToken } = useAuth();
-  const isAdmin = Boolean(user?.isAdmin);
+  const isAdmin = user?.role === "admin";
 
   const deleteService = async (id) => {
     if (!window.confirm("Delete this service?")) return;

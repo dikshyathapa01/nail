@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,7 +17,17 @@ export class AdminGuard implements CanActivate {
     const header = request.headers.authorization;
     const token = header?.startsWith('Bearer ') ? header.slice(7) : '';
 
-    if (!token || !(await this.authService.verifyAdminToken(token))) {
+    if (!token) {
+      throw new UnauthorizedException('Administrator access is required.');
+    }
+    const user = await this.authService.verifyUserToken(token);
+    if (user) {
+      if (user.role !== 'admin') {
+        throw new ForbiddenException('Administrator access is required.');
+      }
+      return true;
+    }
+    if (!(await this.authService.verifyAdminToken(token))) {
       throw new UnauthorizedException('Administrator access is required.');
     }
 

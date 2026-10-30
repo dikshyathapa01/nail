@@ -14,7 +14,7 @@ import { useAuth } from "../context/useAuth";
 export default function Home() {
   const [dynamicServices, setDynamicServices] = useState([]);
   const { user, adminToken } = useAuth();
-  const isAdmin = Boolean(user?.isAdmin);
+  const isAdmin = user?.role === "admin";
 
   const deleteService = async (id) => {
     if (!window.confirm("Delete this service?")) return;

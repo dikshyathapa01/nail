@@ -84,15 +84,15 @@ export default function Admin({ initialTab = "overview" }) {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || !user?.isAdmin) return;
+    if (!isAuthenticated || user?.role !== "admin") return;
     loadData().catch((loadError) => setError(loadError.message));
     const refreshTimer = window.setInterval(() => {
       loadData().catch(() => {});
     }, 30000);
     return () => window.clearInterval(refreshTimer);
-  }, [isAuthenticated, user?.isAdmin, adminToken, editId]);
+  }, [isAuthenticated, user?.role, adminToken, editId]);
 
-  if (!isAuthenticated || !user?.isAdmin) {
+  if (!isAuthenticated || user?.role !== "admin") {
     return (
       <section className="page-shell editorial-page-shell">
         <div className="shell admin-locked editorial-frosted-card">

@@ -178,7 +178,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
-        adminToken: user?.adminToken || "",
+        adminToken: user?.adminToken || (user?.role === "admin" ? user.token : ""),
         isAuthenticated: !!user,
         authModal,
         openAuthModal,

@@ -37,6 +37,9 @@ export class User {
   @Column({ type: 'varchar', length: 30, nullable: true })
   phone?: string | null;
 
+  @Column({ type: 'varchar', length: 20, default: 'user' })
+  role: 'user' | 'admin';
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 

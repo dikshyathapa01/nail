@@ -102,9 +102,12 @@ For disposable local development, add this to `backend/.env`:
 ```dotenv
 DATABASE_URL=postgresql://user:password@localhost:5432/nail_inspo
 TYPEORM_SYNCHRONIZE=true
+ADMIN_EMAILS=owner@gmail.com,admin@gmail.com
 ```
 
 `TYPEORM_SYNCHRONIZE=true` lets TypeORM create or update tables from the entities. Never enable it for production data.
+Google accounts whose email appears in `ADMIN_EMAILS` receive the `admin` role
+when they sign in. All other Google accounts receive the `user` role.
 
 For production, set `TYPEORM_SYNCHRONIZE=false` and keep
 `TYPEORM_MIGRATIONS_RUN=true` so reviewed TypeORM migrations run at startup.

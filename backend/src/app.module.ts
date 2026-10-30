@@ -18,6 +18,9 @@ import { StudioService } from './services/service.entity';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AddGoogleAuthColumns1710000000000 } from './database/migrations/1710000000000-AddGoogleAuthColumns';
 import { CreateUserSessions1710000000001 } from './database/migrations/1710000000001-CreateUserSessions';
+import { EnsureUserSessions1710000000002 } from './database/migrations/1710000000002-EnsureUserSessions';
+import { EnsureActiveBookingSlotUnique1710000000003 } from './database/migrations/1710000000003-EnsureActiveBookingSlotUnique';
+import { AddUserRoles1710000000004 } from './database/migrations/1710000000004-AddUserRoles';
 
 config({ path: join(__dirname, '..', '.env') });
 
@@ -38,8 +41,14 @@ config({ path: join(__dirname, '..', '.env') });
       entities: [User, UserSession, Admin, Booking, AvailabilityBlock, GalleryItem, ServiceCategory, StudioService],
       autoLoadEntities: true,
       synchronize: process.env.TYPEORM_SYNCHRONIZE === 'true',
-      migrations: [AddGoogleAuthColumns1710000000000, CreateUserSessions1710000000001],
-      migrationsRun: process.env.TYPEORM_MIGRATIONS_RUN !== 'false',
+      migrations: [
+        AddGoogleAuthColumns1710000000000,
+        CreateUserSessions1710000000001,
+        EnsureUserSessions1710000000002,
+        EnsureActiveBookingSlotUnique1710000000003,
+        AddUserRoles1710000000004,
+      ],
+      migrationsRun: true,
     }),
   ],
 })

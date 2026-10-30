@@ -22,6 +22,10 @@ export enum BookingStatus {
   unique: true,
   where: `"status" IN ('pending', 'confirmed')`,
 })
+@Index('bookings_one_active_per_slot', ['date', 'time'], {
+  unique: true,
+  where: `"status" IN ('pending', 'confirmed')`,
+})
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
   id: string;

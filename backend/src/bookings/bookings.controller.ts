@@ -62,6 +62,7 @@ export class BookingsController {
   }
 
   @Get()
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'List booking requests for studio administration or filtered by user' })
   @ApiQuery({ name: 'userId', required: false, description: 'Filter bookings by User UUID' })
   @ApiQuery({ name: 'email', required: false, description: 'Filter bookings by customer email' })

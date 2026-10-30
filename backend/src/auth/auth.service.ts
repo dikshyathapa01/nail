@@ -25,6 +25,7 @@ export interface UserResponse {
   avatar: string;
   createdAt?: string;
   isAdmin: boolean;
+  role: 'user' | 'admin';
   isVerified: boolean;
   token?: string;
 }
@@ -59,11 +60,8 @@ export class AuthService {
       phone: user.phone || '',
       avatar: initials || 'U',
       createdAt: user.createdAt?.toISOString(),
-      isAdmin: Boolean(
-        await this.adminRepository.findOne({
-          where: { email: user.email.toLowerCase(), isActive: true },
-        }),
-      ),
+      isAdmin: user.role === 'admin',
+      role: user.role,
       isVerified: user.isVerified,
     };
   }
@@ -84,13 +82,14 @@ export class AuthService {
       avatar: initials || 'A',
       createdAt: admin.createdAt?.toISOString(),
       isAdmin: true,
+      role: 'admin',
       isVerified: true,
     };
   }
 
   private signAdminToken(email: string) {
     const payload = Buffer.from(
-      JSON.stringify({ email: email.toLowerCase(), exp: Date.now() + 1000 * 60 * 60 * 12 }),
+      JSON.stringify({ email: email.toLowerCase(), role: 'admin', exp: Date.now() + 1000 * 60 * 60 * 12 }),
     ).toString('base64url');
     const signature = createHmac('sha256', process.env.AUTH_TOKEN_SECRET || 'local-development-secret')
       .update(payload)
@@ -102,6 +101,7 @@ export class AuthService {
     const payload = Buffer.from(JSON.stringify({
       sub: user.id,
       email: user.email,
+      role: user.role,
       exp: Date.now() + 1000 * 60 * 60 * 24 * 30,
     })).toString('base64url');
     const signature = createHmac('sha256', process.env.AUTH_TOKEN_SECRET || 'local-development-secret')
@@ -117,6 +117,7 @@ export class AuthService {
     const payload = Buffer.from(JSON.stringify({
       sub: user.id,
       email: user.email,
+      role: user.role,
       sessionId: randomBytes(16).toString('hex'),
       exp: Date.now() + 1000 * 60 * 60 * 24 * 30,
     })).toString('base64url');
@@ -167,9 +168,10 @@ export class AuthService {
     try {
       const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
         email?: string;
+        role?: string;
         exp?: number;
       };
-      if (!decoded.email || !decoded.exp || decoded.exp <= Date.now()) return false;
+      if (decoded.role !== 'admin' || !decoded.email || !decoded.exp || decoded.exp <= Date.now()) return false;
       const admin = await this.adminRepository.findOne({
         where: { email: decoded.email.toLowerCase(), isActive: true },
       });
@@ -199,6 +201,16 @@ export class AuthService {
         throw new ConflictException('This Google account and email belong to different user records.');
       }
       let user = googleUser || emailUser;
+      const allowlistedEmails = new Set(
+        (process.env.ADMIN_EMAILS || '')
+          .split(',')
+          .map((value) => value.trim().toLowerCase())
+          .filter(Boolean),
+      );
+      const legacyAdmin = await this.adminRepository.findOne({
+        where: { email, isActive: true },
+      });
+      const isAdmin = allowlistedEmails.has(email) || user?.role === 'admin' || Boolean(legacyAdmin);
       if (!user) {
         user = this.userRepository.create({
           email,
@@ -207,11 +219,13 @@ export class AuthService {
           googleId: profile.sub,
           isVerified: true,
           isActive: true,
+          role: isAdmin ? 'admin' : 'user',
         });
       } else {
         user.googleId = profile.sub;
         user.isVerified = true;
         if (profile.name && !user.name) user.name = profile.name;
+        user.role = isAdmin ? 'admin' : 'user';
       }
       user.isVerified = true;
       const saved = await this.userRepository.save(user);

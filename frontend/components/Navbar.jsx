@@ -19,7 +19,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const dropRef = useRef(null);
-  const isAdmin = Boolean(user?.isAdmin);
+  const isAdmin = user?.role === "admin";
   const isAdminDashboard = location.pathname.startsWith("/admin");
 
   // Close on route change
@@ -96,7 +96,7 @@ export default function Navbar() {
                       <small>{user.email}</small>
                     </div>
                     <hr className="nav-drop-divider" />
-                    {user.isAdmin && (
+                    {user.role === "admin" && (
                       <button
                         type="button"
                         className="nav-drop-item"
@@ -105,7 +105,7 @@ export default function Navbar() {
                         <Shield size={14} /> Admin Dashboard
                       </button>
                     )}
-                    {!user.isAdmin && <button
+                    {user.role !== "admin" && <button
                       type="button"
                       className="nav-drop-item"
                       onClick={() => {
@@ -218,7 +218,7 @@ export default function Navbar() {
                     </div>
                   </div>
                   <div className="mobile-user-btn-row">
-                    {user.isAdmin && (
+                    {isAdmin && (
                       <Link className="frosted-pill-btn" to="/admin" onClick={() => setMobileOpen(false)}>
                         <Shield size={13} /> Admin
                       </Link>

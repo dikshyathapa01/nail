@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -6,6 +6,7 @@ import { LoginDto } from './dto/login.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 import { RefreshSessionDto } from './dto/refresh-session.dto';
+import { AdminGuard } from './admin.guard';
 
 @Controller('auth')
 @ApiTags('auth')
@@ -63,12 +64,14 @@ export class AuthController {
   }
 
   @Get('users')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'List registered users in database' })
   listUsers() {
     return this.authService.listUsers();
   }
 
   @Get('user/:id')
+  @UseGuards(AdminGuard)
   @ApiOperation({ summary: 'Get user details by ID' })
   getUser(@Param('id') id: string) {
     return this.authService.findById(id);

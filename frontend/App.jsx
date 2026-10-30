@@ -13,6 +13,7 @@ import MyBookingsModal from "./components/MyBookingsModal";
 import ScrollToTop from "./components/ScrollToTop";
 import Admin from "./pages/Admin";
 import AuthCallback from "./pages/AuthCallback";
+import AdminRouteGuard from "./components/AdminRouteGuard";
 
 export default function App() {
   return (
@@ -27,9 +28,9 @@ export default function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/booking" element={<Booking />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/admin/bookings" element={<Admin initialTab="appointments" />} />
-            <Route path="/admin/services" element={<Admin initialTab="services" />} />
+            <Route path="/admin" element={<AdminRouteGuard><Admin /></AdminRouteGuard>} />
+            <Route path="/admin/bookings" element={<AdminRouteGuard><Admin initialTab="appointments" /></AdminRouteGuard>} />
+            <Route path="/admin/services" element={<AdminRouteGuard><Admin initialTab="services" /></AdminRouteGuard>} />
             <Route path="/auth/callback" element={<AuthCallback />} />
           </Routes>
         </main>
