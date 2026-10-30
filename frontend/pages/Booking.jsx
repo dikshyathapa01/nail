@@ -15,13 +15,44 @@ export default function Booking() {
   const location = useLocation();
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [restoredBooking, setRestoredBooking] = useState(null);
   // step 1 = pick date+time, step 2 = fill form, step 3 = confirmed
   const [step, setStep] = useState(1);
   const [toast, setToast] = useState("");
   const [confirmedBooking, setConfirmedBooking] = useState(null);
   const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
-  const { user, setMyBookingsOpen } = useAuth();
+  const { user, setMyBookingsOpen, fetchAppointments } = useAuth();
+
+  // Handle post-OAuth redirect or navigation state restoration
+  useEffect(() => {
+    if (location.state?.confirmedBooking) {
+      const confirmed = location.state.confirmedBooking;
+      setConfirmedBooking(confirmed);
+      setDate(confirmed.date || "");
+      setTime(confirmed.time || "");
+      setStep(3);
+      setToast(`Booked! Thanks ${confirmed.name || user?.name || "lovely"} — we'll confirm via WhatsApp.`);
+      setAvailabilityRefreshKey((k) => k + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (location.state?.restoredBooking) {
+      const restored = location.state.restoredBooking;
+      setRestoredBooking(restored);
+      setDate(restored.date || "");
+      setTime(restored.time || "");
+      if (restored.date) {
+        const parts = restored.date.split("-").map(Number);
+        if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+          setCalendarMonth(new Date(parts[0], parts[1] - 1, 1));
+        }
+      }
+      setStep(2);
+      if (location.state.bookingError) {
+        setToast(location.state.bookingError);
+      }
+    }
+  }, [location.state, user?.name]);
 
   // Scroll directly to date choosing section
   useEffect(() => {
@@ -55,16 +86,21 @@ export default function Booking() {
     }
   }, [date, time, step]);
 
-  const handleSuccess = (result) => {
+  const handleSuccess = async (result) => {
+    if (fetchAppointments) {
+      await fetchAppointments().catch(() => {});
+    }
+    setAvailabilityRefreshKey((k) => k + 1);
     setConfirmedBooking(result);
     setStep(3);
-    setToast(`Booked! Thanks ${result.name || "lovely"} — we'll confirm via WhatsApp.`);
+    setToast(`Booked! Thanks ${result.name || user?.name || "lovely"} — we'll confirm via WhatsApp.`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const reset = () => {
     setDate("");
     setTime("");
+    setRestoredBooking(null);
     setConfirmedBooking(null);
     setStep(1);
     const el = document.getElementById("booking-calendar-section");
@@ -134,10 +170,10 @@ export default function Booking() {
 
         <AnimatePresence mode="wait">
 
-          {/* ── STEP 1 ── Date & Time picker */}
-          {step === 1 && (
+          {/* ── STEPS 1 & 2 ── Shared calendar layout so view never unmounts or resets */}
+          {step < 3 && (
             <motion.div
-              key="step1"
+              key="booking-flow"
               id="booking-calendar-section"
               className="booking-layout"
               initial={{ opacity: 0, y: 20 }}
@@ -145,131 +181,108 @@ export default function Booking() {
               exit={{ opacity: 0, y: -16 }}
               transition={{ duration: 0.38 }}
             >
-              <motion.div
-                className="calendar-wrapper-col"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              >
+              <div className="calendar-wrapper-col">
                 <div className="calendar-card editorial-frosted-card">
                   <BookingCalendar
                     value={date}
-                    onChange={setDate}
+                    onChange={(d) => {
+                      setDate(d);
+                      setTime("");
+                    }}
                     selectedTime={time}
                     onTimeChange={setTime}
                     refreshKey={availabilityRefreshKey}
+                    viewMonth={calendarMonth}
+                    onViewMonthChange={setCalendarMonth}
                   />
                   <div className="legend">
                     <span><i className="available-dot" /> Available</span>
                     <span><i className="booked-dot" /> Booked</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
-              <motion.div
-                className="form-panel editorial-frosted-card step1-hint-panel"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <div className="step1-hint-content">
-                  <CalendarIcon size={36} className="step1-hint-icon" />
-                  <h3>Pick your date &amp; slot</h3>
-                  <p>
-                    Select an available date on the calendar, then choose a time window.
-                    Once both are selected you'll move straight to the details form.
-                  </p>
+              <AnimatePresence mode="wait">
+                {step === 1 && (
+                  <motion.div
+                    key="step1-hint"
+                    className="form-panel editorial-frosted-card step1-hint-panel"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                  >
+                    <div className="step1-hint-content">
+                      <CalendarIcon size={36} className="step1-hint-icon" />
+                      <h3>Pick your date &amp; slot</h3>
+                      <p>
+                        Select an available date on the calendar, then choose a time window.
+                        Once both are selected you'll move straight to the details form.
+                      </p>
 
-                  {/* Live selection preview */}
-                  <div className="step1-selection-preview">
-                    <div className={`selection-row ${date ? "filled" : ""}`}>
-                      <CalendarIcon size={15} />
-                      <span>{date ? <><strong>Date:</strong> {date}</> : "No date selected yet"}</span>
-                      {date && <Check size={13} className="check-icon" />}
+                      {/* Live selection preview */}
+                      <div className="step1-selection-preview">
+                        <div className={`selection-row ${date ? "filled" : ""}`}>
+                          <CalendarIcon size={15} />
+                          <span>{date ? <><strong>Date:</strong> {date}</> : "No date selected yet"}</span>
+                          {date && <Check size={13} className="check-icon" />}
+                        </div>
+                        <div className={`selection-row ${time ? "filled" : ""}`}>
+                          <Clock size={15} />
+                          <span>{time ? <><strong>Time:</strong> {time}</> : "No time selected yet"}</span>
+                          {time && <Check size={13} className="check-icon" />}
+                        </div>
+                      </div>
+
+                      {date && time && (
+                        <motion.button
+                          type="button"
+                          className="dark-button step1-continue-btn"
+                          onClick={() => setStep(2)}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          Continue to Details <ArrowRight size={15} />
+                        </motion.button>
+                      )}
                     </div>
-                    <div className={`selection-row ${time ? "filled" : ""}`}>
-                      <Clock size={15} />
-                      <span>{time ? <><strong>Time:</strong> {time}</> : "No time selected yet"}</span>
-                      {time && <Check size={13} className="check-icon" />}
+                  </motion.div>
+                )}
+
+                {step === 2 && (
+                  <motion.div
+                    key="step2-form"
+                    className="form-panel editorial-frosted-card"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.35, ease: "easeOut" }}
+                  >
+                    <div className="panel-heading">
+                      <div>
+                        <p className="eyebrow">Appointment Request</p>
+                        <h2 style={{ fontFamily: "var(--font-serif)", fontSize: "32px", margin: "6px 0 0" }}>
+                          Let's make it <em>lovely.</em>
+                        </h2>
+                      </div>
+                      <div className="panel-icon-badge"><Sparkles size={18} /></div>
                     </div>
-                  </div>
 
-                  {date && time && (
-                    <motion.button
-                      type="button"
-                      className="dark-button step1-continue-btn"
-                      onClick={() => setStep(2)}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      Continue to Details <ArrowRight size={15} />
-                    </motion.button>
-                  )}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-
-          {/* ── STEP 2 ── Details form */}
-          {step === 2 && (
-            <motion.div
-              key="step2"
-              id="booking-calendar-section"
-              className="booking-layout"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.38 }}
-            >
-              <motion.div
-                className="calendar-wrapper-col"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                <div className="calendar-card editorial-frosted-card">
-                  <BookingCalendar
-                    value={date}
-                    onChange={(d) => { setDate(d); setTime(""); setStep(1); }}
-                    selectedTime={time}
-                    onTimeChange={(t) => { setTime(t); }}
-                    refreshKey={availabilityRefreshKey}
-                  />
-                  <div className="legend">
-                    <span><i className="available-dot" /> Available</span>
-                    <span><i className="booked-dot" /> Booked</span>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="form-panel editorial-frosted-card"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
-              >
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">Appointment Request</p>
-                    <h2 style={{ fontFamily: "var(--font-serif)", fontSize: "32px", margin: "6px 0 0" }}>
-                      Let's make it <em>lovely.</em>
-                    </h2>
-                  </div>
-                  <div className="panel-icon-badge"><Sparkles size={18} /></div>
-                </div>
-
-                <BookingForm
-                  date={date}
-                  time={time}
-                  onSuccess={handleSuccess}
-                  onSlotUnavailable={() => {
-                    setTime("");
-                    setAvailabilityRefreshKey((key) => key + 1);
-                    setStep(1);
-                  }}
-                />
-              </motion.div>
+                    <BookingForm
+                      date={date}
+                      time={time}
+                      onSuccess={handleSuccess}
+                      restoredBooking={restoredBooking}
+                      onSlotUnavailable={() => {
+                        setTime("");
+                        setAvailabilityRefreshKey((key) => key + 1);
+                        setStep(1);
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 

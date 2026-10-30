@@ -8,8 +8,8 @@ import { API_BASE_URL } from "../api";
 import { useAuth } from "../context/useAuth";
 import { validateEmail } from "../utils/emailValidator";
 
-export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }) {
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+export default function BookingForm({ date, time, onSuccess, onSlotUnavailable, restoredBooking }) {
+  const { user, isAuthenticated, openAuthModal, fetchAppointments } = useAuth();
   const [submitError, setSubmitError] = useState("");
   const [searchParams] = useSearchParams();
   const serviceParam = searchParams.get("service");
@@ -34,6 +34,17 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
       if (matched) setValue("service", matched.name);
     }
   }, [serviceParam, setValue]);
+
+  // Pre-fill from restored booking data if returning from OAuth / error
+  useEffect(() => {
+    if (restoredBooking) {
+      if (restoredBooking.name) setValue("name", restoredBooking.name);
+      if (restoredBooking.phone) setValue("phone", restoredBooking.phone);
+      if (restoredBooking.email) setValue("email", restoredBooking.email);
+      if (restoredBooking.service) setValue("service", restoredBooking.service);
+      if (restoredBooking.notes) setValue("notes", restoredBooking.notes);
+    }
+  }, [restoredBooking, setValue]);
 
   // Pre-fill name / email / phone from logged-in user
   useEffect(() => {
@@ -80,8 +91,12 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
 
       if (res.ok) {
         const result = await res.json();
+        // Immediately trigger re-fetch of appointment history before success confirmation
+        if (fetchAppointments) {
+          await fetchAppointments().catch(() => {});
+        }
         reset();
-        onSuccess(result);
+        await onSuccess(result);
         return;
       }
 
@@ -118,9 +133,24 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
     }
   };
 
-  // Auth guard on submit: if user not logged in, open auth modal then re-submit on success
+  // Auth guard on submit: if user not logged in, capture pending booking draft and open auth modal
   const submit = (values) => {
     if (!isAuthenticated) {
+      const bookingData = {
+        name: values.name,
+        phone: values.phone,
+        email: values.email,
+        service: values.service,
+        notes: values.notes,
+        date,
+        time,
+      };
+      try {
+        sessionStorage.setItem("pending_booking", JSON.stringify(bookingData));
+      } catch (e) {
+        console.error("Failed to save pending booking draft:", e);
+      }
+
       openAuthModal({
         mode: "login",
         message: `Sign in to finalise your booking for ${values.service || "your session"} on ${date}.`,

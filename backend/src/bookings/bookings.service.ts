@@ -25,10 +25,6 @@ export class BookingsService {
   private readonly logger = new Logger(BookingsService.name);
   private readonly holdDurationMs = 10 * 60 * 1000;
 
-  private normalizeBookingTime(time: string) {
-    return time.replace(/\s+/g, '').replace('-', '-');
-  }
-
   constructor(
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
@@ -194,16 +190,11 @@ export class BookingsService {
     const activeBookings = await this.dataSource.query(
       `SELECT "time", "status"
        FROM "bookings"
-       WHERE (CAST("date" AS text) = $1 OR CAST("booking_date" AS text) = $1)
-         AND LOWER(CAST("status" AS text)) IN ('pending', 'confirmed')`,
-      [date],
+       WHERE ("date" = $1 OR "booking_date" = $1)
+         AND "status" IN ($2, $3)`,
+      [date, BookingStatus.PENDING, BookingStatus.CONFIRMED],
     ) as Array<{ time: string; status: BookingStatus }>;
-    const bookedTimes = new Map(
-      activeBookings.map((booking) => [
-        this.normalizeBookingTime(booking.time),
-        String(booking.status).toLowerCase() as BookingStatus,
-      ]),
-    );
+    const bookedTimes = new Map(activeBookings.map((booking) => [booking.time, booking.status]));
     const blocks = await this.availabilityBlockRepository.find({ where: { date } });
     const fullDayBlocked = blocks.some((block) => block.time === 'FULL_DAY');
     const blockedTimes = new Set(blocks.map((block) => block.time));
@@ -219,7 +210,7 @@ export class BookingsService {
       slots: BOOKING_TIMES.map((time) => {
         const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
         const hasStarted = date === today && currentMinutes >= hours * 60 + minutes;
-        const status = bookedTimes.get(this.normalizeBookingTime(time));
+        const status = bookedTimes.get(time);
         return {
           time,
           available: !fullDayBlocked && !blockedTimes.has(time) && !status && !hasStarted,

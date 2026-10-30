@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 import { API_BASE_URL } from "../api";
 
@@ -9,8 +9,37 @@ const formatDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-export default function BookingCalendar({ value, onChange, selectedTime, onTimeChange, refreshKey = 0 }) {
-  const [month, setMonth] = useState(() => new Date());
+export default function BookingCalendar({
+  value,
+  onChange,
+  selectedTime,
+  onTimeChange,
+  refreshKey = 0,
+  viewMonth: controlledMonth,
+  onViewMonthChange: setControlledMonth,
+}) {
+  const [internalMonth, setInternalMonth] = useState(() => {
+    if (value) {
+      const parts = value.split("-").map(Number);
+      if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return new Date(parts[0], parts[1] - 1, 1);
+      }
+    }
+    return new Date();
+  });
+
+  const month = controlledMonth || internalMonth;
+  const setMonth = useCallback(
+    (updater) => {
+      if (setControlledMonth) {
+        setControlledMonth(updater);
+      } else {
+        setInternalMonth(updater);
+      }
+    },
+    [setControlledMonth]
+  );
+
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [availabilityError, setAvailabilityError] = useState("");
@@ -55,30 +84,45 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
     return () => controller.abort();
   }, [value, refreshKey]);
 
-  const chooseDay = (day) => {
-    const date = new Date(year, monthIndex, day);
-    if (isPastDate(date)) return;
-    onChange(formatDate(date));
-    onTimeChange("");
-  };
-
-  const isPastDate = (date) => {
+  const getMinimumBookingDate = useCallback(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return date < today;
-  };
+    today.setDate(today.getDate() + 1);
+    return today;
+  }, []);
 
-  const isPastMonth = year < new Date().getFullYear()
-    || (year === new Date().getFullYear() && monthIndex < new Date().getMonth());
+  const isUnavailableDate = useCallback((date) => {
+    const minimumDate = getMinimumBookingDate();
+    return date < minimumDate;
+  }, [getMinimumBookingDate]);
+
+  const chooseDay = useCallback((day) => {
+    const date = new Date(year, monthIndex, day);
+    if (isUnavailableDate(date)) return;
+    onChange(formatDate(date));
+    onTimeChange("");
+  }, [year, monthIndex, isUnavailableDate, onChange, onTimeChange]);
+
+  const prevMonth = useCallback(() => {
+    setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  }, [setMonth]);
+
+  const nextMonth = useCallback(() => {
+    setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  }, [setMonth]);
+
+  const minimumBookingDate = getMinimumBookingDate();
+  const isPastMonth = year < minimumBookingDate.getFullYear()
+    || (year === minimumBookingDate.getFullYear() && monthIndex < minimumBookingDate.getMonth());
 
   return (
     <div className="calendar-card">
       <div className="calendar-head">
-        <button disabled={isPastMonth} onClick={() => setMonth(new Date(year, monthIndex - 1, 1))} aria-label="Previous month">
+        <button disabled={isPastMonth} onClick={prevMonth} aria-label="Previous month">
           <ChevronLeft size={18} />
         </button>
         <strong>{month.toLocaleString("en", { month: "long", year: "numeric" })}</strong>
-        <button onClick={() => setMonth(new Date(year, monthIndex + 1, 1))} aria-label="Next month">
+        <button onClick={nextMonth} aria-label="Next month">
           <ChevronRight size={18} />
         </button>
       </div>
@@ -94,12 +138,13 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
           <span key={`empty-${index}`} />
         ))}
         {Array.from({ length: days }, (_, index) => index + 1).map((day) => {
-          const date = formatDate(new Date(year, monthIndex, day));
+          const dateValue = formatDate(new Date(year, monthIndex, day));
+          const unavailable = isUnavailableDate(new Date(year, monthIndex, day));
           return (
             <button
-              key={date}
-              disabled={isPastDate(new Date(year, monthIndex, day))}
-              className={`${value === date ? "selected" : ""} ${isPastDate(new Date(year, monthIndex, day)) ? "past" : ""}`}
+              key={dateValue}
+              disabled={unavailable}
+              className={`${value === dateValue ? "selected" : ""} ${unavailable ? "past" : ""}`}
               onClick={() => chooseDay(day)}
             >
               {day}

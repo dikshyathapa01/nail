@@ -197,14 +197,24 @@ export function AuthProvider({ children }) {
     };
   }, [user?.token]);
 
-  const getUserBookings = useCallback(async () => {
+  const fetchAppointments = useCallback(async () => {
     if (!user?.token) return [];
-    const response = await fetch(`${API_BASE_URL}/appointments/mine`, {
-      headers: { Authorization: `Bearer ${user.token}` },
-    });
-    if (!response.ok) throw new Error("Unable to load your appointments.");
-    return response.json();
-  }, [user]);
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/mine`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (!response.ok) throw new Error("Unable to load your appointments.");
+      const data = await response.json();
+      setSyncVersion((version) => version + 1);
+      channelRef.current?.postMessage({ type: "booking:updated" });
+      return data;
+    } catch (err) {
+      console.error("fetchAppointments failed:", err);
+      return [];
+    }
+  }, [user?.token]);
+
+  const getUserBookings = fetchAppointments;
 
   const saveBookingLocally = (data) => data;
 
@@ -220,6 +230,7 @@ export function AuthProvider({ children }) {
         switchAuthMode,
         loginWithGoogle,
         logout,
+        fetchAppointments,
         getUserBookings,
         syncVersion,
         saveBookingLocally,

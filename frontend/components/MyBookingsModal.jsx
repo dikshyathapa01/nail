@@ -4,6 +4,7 @@ import { X, Calendar, Clock, MapPin, Sparkles, CheckCircle2, AlertCircle, Pencil
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { STUDIO_PHONE } from "../data";
+import { API_BASE_URL } from "../api";
 
 function getMinimumBookingDate() {
   const minimumDate = new Date();
@@ -15,7 +16,7 @@ function getMinimumBookingDate() {
 }
 
 export default function MyBookingsModal() {
-  const { myBookingsOpen, setMyBookingsOpen, user, getUserBookings, syncVersion } = useAuth();
+  const { myBookingsOpen, setMyBookingsOpen, user, getUserBookings, fetchAppointments, syncVersion } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState("");
@@ -25,14 +26,15 @@ export default function MyBookingsModal() {
   useEffect(() => {
     if (!myBookingsOpen) return;
     setError("");
-    getUserBookings().then(setBookings).catch((err) => setError(err.message));
-  }, [myBookingsOpen, getUserBookings, syncVersion]);
+    const load = fetchAppointments || getUserBookings;
+    load().then(setBookings).catch((err) => setError(err.message));
+  }, [myBookingsOpen, fetchAppointments, getUserBookings, syncVersion]);
 
   const cancelBooking = async (id) => {
     if (!window.confirm("Cancel this appointment?")) return;
     setBusyId(id);
     try {
-      const response = await fetch(`${import.meta.env.PROD ? "/api" : "http://localhost:5000/api"}/appointments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
         method: "DELETE", headers: { Authorization: `Bearer ${user.token}` },
       });
       const result = await response.json();
@@ -48,7 +50,7 @@ export default function MyBookingsModal() {
     }
     setBusyId(id);
     try {
-      const response = await fetch(`${import.meta.env.PROD ? "/api" : "http://localhost:5000/api"}/appointments/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
         body: JSON.stringify(editForm),
