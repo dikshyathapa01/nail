@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, Post, Query, UseGuards, Param, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Patch, Post, Query, UseGuards, Param, Req } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { BookingsService } from './bookings.service';
@@ -14,6 +14,8 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Get('availability')
+  @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  @Header('Pragma', 'no-cache')
   @ApiOperation({ summary: 'Check appointment availability for a date' })
   @ApiQuery({ name: 'date', required: true, example: '2026-09-07', description: 'Date in YYYY-MM-DD format' })
   @ApiResponse({ status: 200, description: 'Available and unavailable time slots for the date.' })

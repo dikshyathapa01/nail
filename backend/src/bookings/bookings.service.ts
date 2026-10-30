@@ -187,13 +187,13 @@ export class BookingsService {
 
   async getAvailability(date: string) {
     await this.expirePendingHolds();
-    const activeBookings = await this.bookingRepository
-      .createQueryBuilder('booking')
-      .where('(booking."date" = :date OR booking."booking_date" = :date)', { date })
-      .andWhere('booking.status IN (:...statuses)', {
-        statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
-      })
-      .getMany();
+    const activeBookings = await this.dataSource.query(
+      `SELECT "time", "status"
+       FROM "bookings"
+       WHERE ("date" = $1 OR "booking_date" = $1)
+         AND "status" IN ($2, $3)`,
+      [date, BookingStatus.PENDING, BookingStatus.CONFIRMED],
+    ) as Array<{ time: string; status: BookingStatus }>;
     const bookedTimes = new Map(activeBookings.map((booking) => [booking.time, booking.status]));
     const blocks = await this.availabilityBlockRepository.find({ where: { date } });
     const fullDayBlocked = blocks.some((block) => block.time === 'FULL_DAY');

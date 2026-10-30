@@ -101,9 +101,9 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable }
         setSubmitError("You already have an active appointment. Cancel or wait for that appointment before requesting another.");
         return;
       }
-      if (res.status === 409 && /already requested|unavailable/i.test(message || "")) {
+      if (res.status === 409 && /already requested|already confirmed|currently pending|unavailable/i.test(message || "")) {
         onSlotUnavailable?.();
-        setSubmitError("That slot was just taken. Please choose another available time.");
+        setSubmitError(message || "That slot is no longer available. Please choose another time.");
         return;
       }
       setSubmitError(message || "Unable to confirm booking.");

@@ -34,6 +34,8 @@ export default function BookingCalendar({ value, onChange, selectedTime, onTimeC
 
     fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(value)}`, {
       signal: controller.signal,
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
     })
       .then((r) => {
         if (!r.ok) throw new Error("Unavailable");
