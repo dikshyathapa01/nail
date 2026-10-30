@@ -204,9 +204,10 @@ export default function Admin({ initialTab = "overview" }) {
   const pendingCount = appointments.filter((appointment) => appointment.status === "pending").length;
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const activeAppointments = appointments.filter((appointment) => appointment.status !== "cancelled");
   const visibleAppointments = appointmentView === "today"
-    ? appointments.filter((appointment) => String(appointment.date || appointment.booking_date || "").slice(0, 10) === today)
-    : appointments;
+    ? activeAppointments.filter((appointment) => String(appointment.date || appointment.booking_date || "").slice(0, 10) === today)
+    : activeAppointments;
   return (
     <section className="page-shell editorial-page-shell">
       <div className="shell admin-dashboard">

@@ -4,6 +4,7 @@ import nodemailer from 'nodemailer';
 import {
   BookingEmailData,
   renderBookingEmail,
+  renderBookingStatusEmail,
 } from './common/booking-email.template';
 
 const EMAIL_FROM_PATTERN = /^(?:[^<>]+\s*)?<[^<>\s@]+@[^<>\s@]+\.[^<>\s@]+>|[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
@@ -91,6 +92,38 @@ export class NotificationsService {
 
       throw error;
     }
+  }
+
+  async sendClientStatusNotification(
+    booking: BookingEmailData & { status: string },
+  ): Promise<void> {
+    const recipient = booking.email?.trim();
+    if (!recipient) {
+      this.logger.warn('Cannot send client status email: booking has no email.');
+      return;
+    }
+    if (!this.resend) {
+      this.logger.error('Cannot send client status email: Resend is not configured.');
+      return;
+    }
+
+    const emailFrom = process.env.EMAIL_FROM?.trim();
+    if (!emailFrom || !EMAIL_FROM_PATTERN.test(emailFrom)) {
+      this.logger.error('Cannot send client status email: EMAIL_FROM is invalid or missing.');
+      return;
+    }
+
+    const statusLabel = booking.status.charAt(0).toUpperCase() + booking.status.slice(1);
+    const { error } = await this.resend.emails.send({
+      from: emailFrom,
+      to: [recipient],
+      subject: `Appointment ${statusLabel.toLowerCase()} - Nail Inspo Studio`,
+      html: renderBookingStatusEmail(booking),
+    });
+    if (error) {
+      throw new Error(error.message || 'Resend failed to send the client email.');
+    }
+    this.logger.log(`Client status email sent for appointment ${booking.date} ${booking.time}.`);
   }
 
   async sendVerificationEmail(to: string, name: string, link: string) {

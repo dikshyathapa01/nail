@@ -230,6 +230,20 @@ export class BookingsService {
     if (booking.userId) {
       this.userSyncGateway.emitUserEvent(booking.userId, 'booking:updated', { action: 'status', booking: response });
     }
+    if (status === BookingStatus.CONFIRMED || status === BookingStatus.CANCELLED || status === BookingStatus.COMPLETED) {
+      try {
+        await this.notificationsService.sendClientStatusNotification({
+          ...response,
+          status,
+        });
+      } catch (emailError) {
+        this.logger.error(
+          `Appointment status was saved, but client notification failed: ${
+            emailError instanceof Error ? emailError.message : String(emailError)
+          }`,
+        );
+      }
+    }
     return response;
   }
 

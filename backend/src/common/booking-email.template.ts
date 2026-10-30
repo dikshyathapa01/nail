@@ -58,3 +58,30 @@ export const renderBookingEmail = (booking: BookingEmailData): string => `<!doct
     </table>
   </body>
 </html>`;
+
+export const renderBookingStatusEmail = (
+  booking: BookingEmailData & { status: string },
+): string => `<!doctype html>
+<html lang="en">
+  <body style="margin:0;background:#f7f3f0;color:#2e2927;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f7f3f0;padding:24px 12px;">
+      <tr><td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;background:#ffffff;border:1px solid #e7ded8;">
+          <tr><td style="padding:30px 32px 22px;background:#2e2927;color:#ffffff;">
+            <p style="margin:0 0 8px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#e7cfc2;">Nail Inspo Studio</p>
+            <h1 style="margin:0;font-size:26px;line-height:1.25;font-weight:600;">Appointment ${escapeHtml(booking.status)}</h1>
+          </td></tr>
+          <tr><td style="padding:24px 32px 30px;">
+            <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${escapeHtml(booking.name || 'there')}, your appointment status has been updated.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+              ${row('Service', booking.service)}
+              ${row('Date', booking.date)}
+              ${row('Time', booking.time)}
+              ${row('Status', booking.status)}
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
