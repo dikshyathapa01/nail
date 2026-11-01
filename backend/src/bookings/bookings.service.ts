@@ -334,24 +334,31 @@ export class BookingsService {
   }
 
   async updateForUser(id: string, userId: string, dto: UpdateBookingDto) {
-    const booking = await this.bookingRepository.findOne({ where: { id }, relations: { user: true } });
-    if (!booking || booking.userId !== userId) throw new ConflictException('Appointment not found.');
-    this.assertChangeable(booking);
-    const date = dto.date || booking.date || booking.bookingDate;
-    if (!date) throw new ConflictException('Appointment date is missing.');
-    const time = dto.time || booking.time;
-    const today = new Date().toISOString().slice(0, 10);
-    if (date <= today) throw new ConflictException('Appointments must be scheduled from tomorrow onward.');
     try {
       const saved = await this.dataSource.transaction(async (manager) => {
-        const conflict = await manager.findOne(Booking, {
-          where: [
-            { date, time, status: BookingStatus.PENDING },
-            { date, time, status: BookingStatus.CONFIRMED },
-            { bookingDate: date, time, status: BookingStatus.PENDING },
-            { bookingDate: date, time, status: BookingStatus.CONFIRMED },
-          ],
+        const booking = await manager.findOne(Booking, {
+          where: { id, user: { id: userId } },
+          relations: { user: true },
+          lock: { mode: 'pessimistic_write' },
         });
+        if (!booking) throw new ConflictException('Appointment not found.');
+        this.assertChangeable(booking);
+        const date = dto.date || booking.date || booking.bookingDate;
+        if (!date) throw new ConflictException('Appointment date is missing.');
+        const time = dto.time || booking.time;
+        const today = new Date().toISOString().slice(0, 10);
+        if (date <= today) {
+          throw new ConflictException('Appointments must be scheduled from tomorrow onward.');
+        }
+        const conflict = await manager
+          .createQueryBuilder(Booking, 'booking')
+          .where('booking.id <> :id', { id })
+          .andWhere('COALESCE(booking.date, booking.bookingDate) = :date', { date })
+          .andWhere('booking.time = :time', { time })
+          .andWhere('booking.status IN (:...statuses)', {
+            statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+          })
+          .getOne();
         if (conflict && conflict.id !== id) throw new ConflictException('That time is already requested.');
         const blocks = await manager.find(AvailabilityBlock, { where: { date } });
         if (blocks.some((block) => block.time === 'FULL_DAY' || block.time === time)) {

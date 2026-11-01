@@ -186,7 +186,22 @@ export class AuthService {
     if (!clientId) {
       throw new UnauthorizedException('Google authentication is not configured on the backend.');
     }
-    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    const verificationController = new AbortController();
+    const verificationTimeout = setTimeout(() => verificationController.abort(), 15000);
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`,
+        { signal: verificationController.signal },
+      );
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new UnauthorizedException('Google authentication timed out. Please try again.');
+      }
+      throw new UnauthorizedException('Google authentication failed. Please try again.');
+    } finally {
+      clearTimeout(verificationTimeout);
+    }
     if (!response.ok) throw new UnauthorizedException('Google authentication failed.');
     const profile = await response.json() as { sub?: string; email?: string; email_verified?: string; name?: string; picture?: string; aud?: string };
     if (!profile.sub || !profile.email || profile.email_verified !== 'true' ||

@@ -28,17 +28,25 @@ function readSessionUser() {
 
 async function requestAuth(path, payload) {
   let response;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Authentication is taking too long. Please try again.");
+    }
     const isLocal = API_BASE_URL.includes("localhost") || API_BASE_URL.includes("127.0.0.1");
     throw new Error(isLocal
       ? "The local backend is not running. Start it with: npm --prefix backend run start:dev"
       : "Unable to reach the deployed authentication server. Verify the backend deployment and API URL.");
+  } finally {
+    window.clearTimeout(timeout);
   }
   const result = await response.json().catch(() => ({}));
   if (response.status === 404 && path === "/auth/google") {
@@ -71,7 +79,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user?.token) return undefined;
     if (refreshedTokenRef.current === user.token) return undefined;
-    refreshedTokenRef.current = user.token;
+    const tokenBeingRefreshed = user.token;
+    refreshedTokenRef.current = tokenBeingRefreshed;
     let active = true;
 
     fetch(`${API_BASE_URL}/auth/refresh`, {
@@ -86,13 +95,19 @@ export function AuthProvider({ children }) {
       .then((result) => {
         if (!active || !result.user || !result.token) return;
         const refreshedUser = { ...result.user, token: result.token };
+        // Mark the replacement token before updating state so the effect does
+        // not immediately refresh the same session again.
+        refreshedTokenRef.current = refreshedUser.token;
         setUser(refreshedUser);
         sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(refreshedUser));
       })
       .catch(() => {
         if (!active) return;
-        setUser(null);
-        sessionStorage.removeItem(STORAGE_KEY_USER);
+        setUser((currentUser) => {
+          if (currentUser?.token !== tokenBeingRefreshed) return currentUser;
+          sessionStorage.removeItem(STORAGE_KEY_USER);
+          return null;
+        });
       });
 
     return () => {
@@ -210,7 +225,7 @@ export function AuthProvider({ children }) {
       return data;
     } catch (err) {
       console.error("fetchAppointments failed:", err);
-      return [];
+      throw err;
     }
   }, [user?.token]);
 
