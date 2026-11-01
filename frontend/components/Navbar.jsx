@@ -255,17 +255,7 @@ export default function Navbar() {
                       openAuthModal({ mode: "login" });
                     }}
                   >
-                    <User size={14} /> Sign In
-                  </button>
-                  <button
-                    type="button"
-                    className="light-button mobile-auth-pill"
-                    onClick={() => {
-                      setMobileOpen(false);
-                      openAuthModal({ mode: "login" });
-                    }}
-                  >
-                    Continue with Google
+                    <User size={14} /> Continue with Google
                   </button>
                 </div>
               )}

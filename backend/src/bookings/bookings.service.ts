@@ -352,10 +352,10 @@ export class BookingsService {
         }
         const conflict = await manager
           .createQueryBuilder(Booking, 'booking')
-          .where('booking.id <> :id', { id })
-          .andWhere('COALESCE(booking.date, booking.bookingDate) = :date', { date })
-          .andWhere('booking.time = :time', { time })
-          .andWhere('booking.status IN (:...statuses)', {
+          .where('"booking"."id" <> :id', { id })
+          .andWhere('COALESCE("booking"."date", "booking"."booking_date") = :date', { date })
+          .andWhere('"booking"."time" = :time', { time })
+          .andWhere('"booking"."status" IN (:...statuses)', {
             statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
           })
           .getOne();

@@ -22,6 +22,10 @@ export default function MyBookingsModal() {
   const [busyId, setBusyId] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editForm, setEditForm] = useState({ date: "", time: "", notes: "" });
+  const [editOriginal, setEditOriginal] = useState(null);
+  const [editSlots, setEditSlots] = useState([]);
+  const [editSlotsLoading, setEditSlotsLoading] = useState(false);
+  const [editSlotsError, setEditSlotsError] = useState("");
 
   useEffect(() => {
     if (!myBookingsOpen) return;
@@ -29,6 +33,48 @@ export default function MyBookingsModal() {
     const load = fetchAppointments || getUserBookings;
     load().then(setBookings).catch((err) => setError(err.message));
   }, [myBookingsOpen, fetchAppointments, getUserBookings, syncVersion]);
+
+  useEffect(() => {
+    if (!editingId || !editForm.date) {
+      setEditSlots([]);
+      setEditSlotsError("");
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setEditSlotsLoading(true);
+    setEditSlotsError("");
+    fetch(`${API_BASE_URL}/bookings/availability?date=${encodeURIComponent(editForm.date)}`, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Availability could not be checked.");
+        return response.json();
+      })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setEditSlots(result.slots || []);
+      })
+      .catch((availabilityError) => {
+        if (availabilityError.name !== "AbortError") {
+          setEditSlotsError(availabilityError.message);
+          setEditSlots([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setEditSlotsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [editingId, editForm.date]);
+
+  const editIsDirty = Boolean(editOriginal && (
+    editForm.date !== editOriginal.date
+    || editForm.time !== editOriginal.time
+    || editForm.notes !== editOriginal.notes
+  ));
 
   const cancelBooking = async (id) => {
     if (!window.confirm("Cancel this appointment?")) return;
@@ -59,6 +105,7 @@ export default function MyBookingsModal() {
       if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join(", ") : result.message || "Unable to update appointment.");
       setBookings((current) => current.map((booking) => booking.id === id ? result : booking));
       setEditingId("");
+      setEditOriginal(null);
     } catch (err) { setError(err.message); } finally { setBusyId(""); }
   };
 
@@ -123,22 +170,49 @@ export default function MyBookingsModal() {
                   )}
                   {editingId === b.id && (
                     <div className="booking-edit-form">
-                      <label>Date <input
+                      <label className={editForm.date !== editOriginal?.date ? "field-modified" : ""}>Date <input
                         type="date"
                         min={getMinimumBookingDate()}
                         value={editForm.date}
                         onChange={(event) => {
                           const date = event.target.value;
-                          if (date >= getMinimumBookingDate()) {
-                            setEditForm({ ...editForm, date });
-                          }
+                          setEditForm((current) => ({
+                            ...current,
+                            date: date >= getMinimumBookingDate() ? date : current.date,
+                            time: date === current.date ? current.time : "",
+                          }));
                         }}
                       /></label>
-                      <label>Time <input value={editForm.time} placeholder="09:00 - 10:30" onChange={(event) => setEditForm({ ...editForm, time: event.target.value })} /></label>
-                      <label>Nail art preferences <textarea rows={2} value={editForm.notes} onChange={(event) => setEditForm({ ...editForm, notes: event.target.value })} /></label>
+                      <fieldset className={editForm.time !== editOriginal?.time ? "field-modified" : ""}>
+                        <legend>Time</legend>
+                        {editSlotsLoading && <small>Checking available windows...</small>}
+                        {editSlotsError && <small className="form-error">{editSlotsError}</small>}
+                        {!editSlotsLoading && !editSlotsError && (
+                          <div className="slots" role="group" aria-label="Available appointment times">
+                            {editSlots.map((slot) => {
+                              const isCurrentSlot = editForm.date === editOriginal?.date && slot.time === editOriginal?.time;
+                              const available = slot.available || isCurrentSlot;
+                              return (
+                                <button
+                                  key={slot.time}
+                                  type="button"
+                                  disabled={!available}
+                                  className={`${editForm.time === slot.time ? "selected" : ""} ${available ? "available" : "booked"}`}
+                                  onClick={() => setEditForm((current) => ({ ...current, time: slot.time }))}
+                                >
+                                  {slot.time}
+                                  <small>{available ? "Available" : "Booked"}</small>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </fieldset>
+                      <label className={editForm.notes !== editOriginal?.notes ? "field-modified" : ""}>Nail art preferences <textarea rows={2} value={editForm.notes} onChange={(event) => setEditForm((current) => ({ ...current, notes: event.target.value }))} /></label>
+                      {editIsDirty && <span className="booking-edit-dirty">Unsaved changes</span>}
                       <div className="mobile-user-btn-row">
-                        <button type="button" className="dark-button" disabled={busyId === b.id} onClick={() => saveBooking(b.id)}>Save changes</button>
-                        <button type="button" className="light-button" onClick={() => setEditingId("")}>Close</button>
+                        <button type="button" className="dark-button" disabled={busyId === b.id || !editIsDirty || !editForm.time} onClick={() => saveBooking(b.id)}>Save changes</button>
+                        <button type="button" className="light-button" onClick={() => { setEditingId(""); setEditOriginal(null); }}>Close</button>
                       </div>
                     </div>
                   )}
@@ -147,8 +221,11 @@ export default function MyBookingsModal() {
                       <>
                         <button type="button" className="light-button" onClick={() => {
                           setEditingId(b.id);
-                          setEditForm({ date: b.date || "", time: b.time || "", notes: b.notes || "" });
-                        }}><Pencil size={13} /> Edit</button>
+                            const initial = { date: b.date || "", time: b.time || "", notes: b.notes || "" };
+                            setEditForm(initial);
+                            setEditOriginal(initial);
+                            setEditSlotsError("");
+                          }}><Pencil size={13} /> Edit</button>
                         <button type="button" className="light-button" disabled={busyId === b.id} onClick={() => cancelBooking(b.id)}>
                           {busyId === b.id ? "Cancelling..." : "Cancel appointment"}
                         </button>

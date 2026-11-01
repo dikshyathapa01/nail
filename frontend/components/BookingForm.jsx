@@ -263,7 +263,7 @@ export default function BookingForm({ date, time, onSuccess, onSlotUnavailable, 
           ? <><span className="button-spinner" aria-hidden="true" /> Sending request...</>
           : isAuthenticated
           ? "Confirm Studio Appointment"
-          : "Continue & Sign In to Confirm"}{" "}
+          : "Continue with Google"}{" "}
         {!isSubmitting && <ArrowRight size={16} />}
       </button>
 
