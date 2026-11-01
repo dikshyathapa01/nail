@@ -15,6 +15,18 @@ function getMinimumBookingDate() {
   return `${minimumDate.getFullYear()}-${month}-${day}`;
 }
 
+function isEditableAppointment(booking) {
+  return ["pending", "confirmed"].includes(booking.status)
+    && Boolean(booking.date)
+    && booking.date >= getMinimumBookingDate();
+}
+
+function isEditLocked(booking) {
+  return Boolean(booking.date)
+    && booking.date < getMinimumBookingDate()
+    && booking.status !== "cancelled";
+}
+
 export default function MyBookingsModal() {
   const { myBookingsOpen, setMyBookingsOpen, user, getUserBookings, fetchAppointments, syncVersion } = useAuth();
   const [bookings, setBookings] = useState([]);
@@ -84,8 +96,13 @@ export default function MyBookingsModal() {
         method: "DELETE", headers: { Authorization: `Bearer ${user.token}` },
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Unable to cancel appointment.");
-      setBookings((current) => current.filter((booking) => booking.id !== id));
+      if (!response.ok) {
+        const message = Array.isArray(result.message) ? result.message.join(", ") : result.message;
+        throw new Error(message || "Unable to cancel appointment.");
+      }
+      setBookings((current) => current.map((booking) => (
+        booking.id === id ? { ...booking, ...result, status: result.status || "cancelled" } : booking
+      )));
     } catch (err) { setError(err.message); } finally { setBusyId(""); }
   };
 
@@ -150,7 +167,9 @@ export default function MyBookingsModal() {
                 </Link>
               </div>
             ) : (
-              bookings.map((b, idx) => (
+              bookings.map((b, idx) => {
+                const canEdit = isEditableAppointment(b);
+                return (
                 <article key={b.id || idx} className="booking-card">
                   <div className="booking-card-top">
                     <span className="booking-service-name">{b.service || "Nail Session"}</span>
@@ -217,24 +236,33 @@ export default function MyBookingsModal() {
                     </div>
                   )}
                   <p className="booking-card-footer">
-                    {["pending", "confirmed"].includes(b.status) && (
+                    {["pending", "confirmed"].includes(b.status) ? (
                       <>
-                        <button type="button" className="light-button" onClick={() => {
+                          {canEdit ? <button type="button" className="light-button" onClick={() => {
                           setEditingId(b.id);
                             const initial = { date: b.date || "", time: b.time || "", notes: b.notes || "" };
                             setEditForm(initial);
                             setEditOriginal(initial);
                             setEditSlotsError("");
-                          }}><Pencil size={13} /> Edit</button>
+                          }}><Pencil size={13} /> Edit</button> : (
+                            <span className="booking-edit-locked" title="Editing is locked on the day of the appointment">
+                              Editing locked on appointment day
+                            </span>
+                          )}
                         <button type="button" className="light-button" disabled={busyId === b.id} onClick={() => cancelBooking(b.id)}>
                           {busyId === b.id ? "Cancelling..." : "Cancel appointment"}
                         </button>
                       </>
+                    ) : isEditLocked(b) && (
+                      <span className="booking-edit-locked" title="Editing is locked on the day of the appointment">
+                        Editing locked on the day of the appointment
+                      </span>
                     )}
                     <span>Need to reschedule? Call/WhatsApp {STUDIO_PHONE}</span>
                   </p>
                 </article>
-              ))
+                );
+              })
             )}
           </div>
         </motion.div>

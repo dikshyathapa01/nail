@@ -442,9 +442,17 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
 
   async cancelForUser(id: string, userId: string) {
     await this.completePastBookings();
-    const booking = await this.bookingRepository.findOne({ where: { id } });
-    if (!booking || booking.userId !== userId) throw new ConflictException('Appointment not found.');
-    this.assertChangeable(booking);
+    const booking = await this.bookingRepository.findOne({
+      where: { id, user: { id: userId } },
+      relations: { user: true },
+    });
+    if (!booking) throw new ConflictException('Appointment not found.');
+    if (booking.status === BookingStatus.CANCELLED) {
+      throw new ConflictException('This appointment is already cancelled.');
+    }
+    if (booking.status === BookingStatus.COMPLETED) {
+      throw new ConflictException('Completed appointments cannot be cancelled.');
+    }
     booking.status = BookingStatus.CANCELLED;
     booking.holdExpiresAt = null;
     const response = this.toResponse(await this.bookingRepository.save(booking));
@@ -458,9 +466,17 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
     if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.COMPLETED) {
       throw new ConflictException('This appointment can no longer be changed.');
     }
-    const appointment = new Date(`${booking.date || booking.bookingDate}T${booking.time.slice(0, 5)}:00`);
-    if (appointment.getTime() - Date.now() < 24 * 60 * 60 * 1000) {
-      throw new ConflictException('Appointments can only be changed at least 24 hours in advance.');
+    const appointmentDate = booking.date || booking.bookingDate;
+    const today = new Date();
+    const currentDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+    if (!appointmentDate || appointmentDate <= currentDate) {
+      throw new ConflictException(
+        'Appointments cannot be edited on the day of the appointment or after it.',
+      );
     }
   }
 }
