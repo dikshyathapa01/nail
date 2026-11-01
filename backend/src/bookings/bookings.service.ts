@@ -2,6 +2,8 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
@@ -21,9 +23,10 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 import { UserSyncGateway } from '../realtime/user-sync.gateway';
 
 @Injectable()
-export class BookingsService {
+export class BookingsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BookingsService.name);
   private readonly holdDurationMs = 10 * 60 * 1000;
+  private completionTimer?: NodeJS.Timeout;
 
   constructor(
     @InjectRepository(Booking)
@@ -36,6 +39,54 @@ export class BookingsService {
     private readonly dataSource: DataSource,
     private readonly userSyncGateway: UserSyncGateway,
   ) {}
+
+  onModuleInit() {
+    void this.completePastBookings();
+    this.completionTimer = setInterval(() => {
+      void this.completePastBookings();
+    }, 60 * 1000);
+  }
+
+  onModuleDestroy() {
+    if (this.completionTimer) clearInterval(this.completionTimer);
+  }
+
+  private async completePastBookings() {
+    try {
+      const result = await this.bookingRepository
+        .createQueryBuilder()
+        .update(Booking)
+        .set({
+          status: BookingStatus.COMPLETED,
+          holdExpiresAt: null,
+        })
+        .where(`"status" IN (:...statuses)`, {
+          statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+        })
+        .andWhere(`COALESCE("date", "booking_date") IS NOT NULL`)
+        .andWhere(
+          `(COALESCE("date", "booking_date") + CAST(SUBSTRING("time", 1, 5) AS time)) <= CURRENT_TIMESTAMP`,
+        )
+        .returning(['id', 'user_id'])
+        .execute();
+
+      if (result.affected) {
+        this.logger.log(`Automatically completed ${result.affected} past appointment(s).`);
+        for (const booking of result.raw as Array<{ id: string; user_id: string }>) {
+          this.userSyncGateway.emitUserEvent(booking.user_id, 'booking:updated', {
+            action: 'status',
+            booking: { id: booking.id, status: BookingStatus.COMPLETED },
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Unable to complete past appointments: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
 
   private toResponse(booking: Booking) {
     return {
@@ -57,6 +108,7 @@ export class BookingsService {
   }
 
   async create(booking: CreateBookingDto) {
+    await this.completePastBookings();
     if (booking.email) {
       await verifyRealEmail(booking.email);
     }
@@ -186,6 +238,7 @@ export class BookingsService {
   }
 
   async getAvailability(date: string) {
+    await this.completePastBookings();
     await this.expirePendingHolds();
     const activeBookings = await this.dataSource.query(
       `SELECT "time", "status"
@@ -251,6 +304,7 @@ export class BookingsService {
   }
 
   async list(userId?: string, email?: string) {
+    await this.completePastBookings();
     await this.expirePendingHolds();
     const where = userId
       ? [
@@ -273,6 +327,7 @@ export class BookingsService {
   }
 
   async updateStatus(id: string, status: BookingStatus) {
+    await this.completePastBookings();
     await this.expirePendingHolds();
     let savedBooking: Booking;
     try {
@@ -334,6 +389,7 @@ export class BookingsService {
   }
 
   async updateForUser(id: string, userId: string, dto: UpdateBookingDto) {
+    await this.completePastBookings();
     try {
       const saved = await this.dataSource.transaction(async (manager) => {
         const booking = await manager.findOne(Booking, {
@@ -385,6 +441,7 @@ export class BookingsService {
   }
 
   async cancelForUser(id: string, userId: string) {
+    await this.completePastBookings();
     const booking = await this.bookingRepository.findOne({ where: { id } });
     if (!booking || booking.userId !== userId) throw new ConflictException('Appointment not found.');
     this.assertChangeable(booking);
