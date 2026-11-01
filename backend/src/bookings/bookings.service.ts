@@ -453,6 +453,18 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
     if (booking.status === BookingStatus.COMPLETED) {
       throw new ConflictException('Completed appointments cannot be cancelled.');
     }
+    const appointmentDate = booking.date || booking.bookingDate;
+    const today = new Date();
+    const currentDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+    if (booking.status === BookingStatus.CONFIRMED && (!appointmentDate || appointmentDate <= currentDate)) {
+      throw new ConflictException(
+        'Confirmed appointments cannot be cancelled on the day of the appointment.',
+      );
+    }
     booking.status = BookingStatus.CANCELLED;
     booking.holdExpiresAt = null;
     const response = this.toResponse(await this.bookingRepository.save(booking));

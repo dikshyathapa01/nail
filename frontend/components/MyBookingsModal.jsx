@@ -27,6 +27,11 @@ function isEditLocked(booking) {
     && booking.status !== "cancelled";
 }
 
+function canCancelAppointment(booking) {
+  if (booking.status !== "confirmed") return booking.status === "pending";
+  return Boolean(booking.date) && booking.date >= getMinimumBookingDate();
+}
+
 export default function MyBookingsModal() {
   const { myBookingsOpen, setMyBookingsOpen, user, getUserBookings, fetchAppointments, syncVersion } = useAuth();
   const [bookings, setBookings] = useState([]);
@@ -249,9 +254,15 @@ export default function MyBookingsModal() {
                               Editing locked on appointment day
                             </span>
                           )}
-                        <button type="button" className="light-button" disabled={busyId === b.id} onClick={() => cancelBooking(b.id)}>
-                          {busyId === b.id ? "Cancelling..." : "Cancel appointment"}
-                        </button>
+                        {canCancelAppointment(b) ? (
+                          <button type="button" className="light-button" disabled={busyId === b.id} onClick={() => cancelBooking(b.id)}>
+                            {busyId === b.id ? "Cancelling..." : "Cancel appointment"}
+                          </button>
+                        ) : (
+                          <span className="booking-edit-locked" title="Confirmed appointments cannot be cancelled on the appointment day">
+                            Cancellation locked on appointment day
+                          </span>
+                        )}
                       </>
                     ) : isEditLocked(b) && (
                       <span className="booking-edit-locked" title="Editing is locked on the day of the appointment">
