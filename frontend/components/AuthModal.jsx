@@ -92,7 +92,12 @@ export default function AuthModal() {
             </div>
           ) : (
             <>
-              <div ref={googleButtonRef} className="google-login-button" aria-label="Continue with Google">
+              <div
+                ref={googleButtonRef}
+                className="google-login-button"
+                aria-label="Continue with Google"
+                onClick={() => setError("")}
+              >
                 <span className="sr-only">Continue with Google</span>
               </div>
             </>

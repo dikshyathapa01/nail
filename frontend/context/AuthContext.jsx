@@ -122,6 +122,8 @@ export function AuthProvider({ children }) {
     message: "",
     onSuccess: null,
   });
+  const authSuccessRef = useRef(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   // My bookings modal
   const [myBookingsOpen, setMyBookingsOpen] = useState(false);
@@ -138,24 +140,32 @@ export function AuthProvider({ children }) {
     setAuthModal((prev) => ({ ...prev, mode }));
   };
 
-  const authSuccess = authModal.onSuccess;
+  useEffect(() => {
+    authSuccessRef.current = authModal.onSuccess;
+  }, [authModal.onSuccess]);
+
   const loginWithGoogle = useCallback(async (credential) => {
-    let result;
+    setIsAuthLoading(true);
     try {
-      result = await requestAuth("/auth/google", { credential, deviceId: getDeviceId() });
-    } catch (error) {
-      const isOlderBackend = error instanceof Error && error.message.includes("property deviceId should not exist");
-      if (!isOlderBackend) throw error;
-      result = await requestAuth("/auth/google", { credential });
+      let result;
+      try {
+        result = await requestAuth("/auth/google", { credential, deviceId: getDeviceId() });
+      } catch (error) {
+        const isOlderBackend = error instanceof Error && error.message.includes("property deviceId should not exist");
+        if (!isOlderBackend) throw error;
+        result = await requestAuth("/auth/google", { credential });
+      }
+      const sessionUser = { ...result.user, token: result.token || "" };
+      refreshedTokenRef.current = sessionUser.token;
+      setUser(sessionUser);
+      sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
+      channelRef.current?.postMessage({ type: "auth", user: sessionUser });
+      if (authSuccessRef.current) authSuccessRef.current(sessionUser);
+      return sessionUser;
+    } finally {
+      setIsAuthLoading(false);
     }
-    const sessionUser = { ...result.user, token: result.token || "" };
-    refreshedTokenRef.current = sessionUser.token;
-    setUser(sessionUser);
-    sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(sessionUser));
-    channelRef.current?.postMessage({ type: "auth", user: sessionUser });
-    if (authSuccess) authSuccess(sessionUser);
-    return sessionUser;
-  }, [authSuccess]);
+  }, []);
 
   const logout = () => {
     if (user?.token) {
@@ -244,6 +254,7 @@ export function AuthProvider({ children }) {
         closeAuthModal,
         switchAuthMode,
         loginWithGoogle,
+        isAuthLoading,
         logout,
         fetchAppointments,
         getUserBookings,
