@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import "./index.css";
+import { API_BASE_URL } from "./api";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
@@ -16,6 +18,20 @@ import AuthCallback from "./pages/AuthCallback";
 import AdminRouteGuard from "./components/AdminRouteGuard";
 
 export default function App() {
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`${API_BASE_URL}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    }).catch(() => {
+      // The backend may still be waking up; authentication and API requests
+      // handle their own errors when the user performs an action.
+    });
+
+    return () => controller.abort();
+  }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>

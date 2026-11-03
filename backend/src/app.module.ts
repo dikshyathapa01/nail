@@ -23,10 +23,12 @@ import { EnsureActiveBookingSlotUnique1710000000003 } from './database/migration
 import { AddUserRoles1710000000004 } from './database/migrations/1710000000004-AddUserRoles';
 import { AddBookingHolds1710000000005 } from './database/migrations/1710000000005-AddBookingHolds';
 import { EnsureActiveBookingPerUserUnique1710000000006 } from './database/migrations/1710000000006-EnsureActiveBookingPerUserUnique';
+import { HealthController } from './health.controller';
 
 config({ path: join(__dirname, '..', '.env') });
 
 @Module({
+  controllers: [HealthController],
   imports: [
     AuthModule,
     RealtimeModule,
