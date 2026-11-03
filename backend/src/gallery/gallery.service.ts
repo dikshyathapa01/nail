@@ -29,6 +29,24 @@ export class GalleryService {
     private readonly galleryRepository: Repository<GalleryItem>,
   ) {}
 
+  private cloudinaryErrorMessage(error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (typeof error === 'object' && error !== null) {
+      const providerMessage = (error as { error?: { message?: unknown } }).error?.message;
+      if (typeof providerMessage === 'string' && providerMessage.trim()) {
+        return providerMessage;
+      }
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return 'Unknown Cloudinary error.';
+      }
+    }
+    return String(error);
+  }
+
   private configureCloudinary() {
     const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
     if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY || !CLOUDINARY_API_SECRET) {
@@ -104,7 +122,7 @@ export class GalleryService {
       upload = await this.uploadToCloudinary(file);
     } catch (error) {
       throw new ServiceUnavailableException(
-        `Cloudinary upload failed: ${error instanceof Error ? error.message : String(error)}`,
+        `Cloudinary upload failed: ${this.cloudinaryErrorMessage(error)}`,
       );
     }
 
@@ -135,7 +153,7 @@ export class GalleryService {
         await cloudinary.uploader.destroy(item.cloudinaryPublicId, { resource_type: 'image' });
       } catch (error) {
         throw new ServiceUnavailableException(
-          `Cloudinary deletion failed: ${error instanceof Error ? error.message : String(error)}`,
+          `Cloudinary deletion failed: ${this.cloudinaryErrorMessage(error)}`,
         );
       }
     }
