@@ -65,6 +65,7 @@ export function AuthProvider({ children }) {
   const channelRef = useRef(null);
   const socketRef = useRef(null);
   const refreshedTokenRef = useRef(null);
+  const restorationStartedRef = useRef(false);
   const [syncVersion, setSyncVersion] = useState(0);
   const [user, setUser] = useState(() => {
     try {
@@ -75,13 +76,18 @@ export function AuthProvider({ children }) {
     }
     return readSessionUser();
   });
+  const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
-    if (!user?.token) return undefined;
-    if (refreshedTokenRef.current === user.token) return undefined;
-    const tokenBeingRefreshed = user.token;
+    if (restorationStartedRef.current) return undefined;
+    restorationStartedRef.current = true;
+
+    const tokenBeingRefreshed = user?.token;
+    if (!tokenBeingRefreshed) {
+      setIsRestoring(false);
+      return undefined;
+    }
     refreshedTokenRef.current = tokenBeingRefreshed;
-    let active = true;
 
     fetch(`${API_BASE_URL}/auth/refresh`, {
       method: "POST",
@@ -93,7 +99,7 @@ export function AuthProvider({ children }) {
         return response.json();
       })
       .then((result) => {
-        if (!active || !result.user || !result.token) return;
+        if (!result.user || !result.token) return;
         const refreshedUser = { ...result.user, token: result.token };
         // Mark the replacement token before updating state so the effect does
         // not immediately refresh the same session again.
@@ -102,18 +108,17 @@ export function AuthProvider({ children }) {
         sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(refreshedUser));
       })
       .catch(() => {
-        if (!active) return;
         setUser((currentUser) => {
           if (currentUser?.token !== tokenBeingRefreshed) return currentUser;
           sessionStorage.removeItem(STORAGE_KEY_USER);
           return null;
         });
+      })
+      .finally(() => {
+        setIsRestoring(false);
       });
-
-    return () => {
-      active = false;
-    };
-  }, [user?.token]);
+    return undefined;
+  }, []);
 
   // Auth modal state
   const [authModal, setAuthModal] = useState({
@@ -203,6 +208,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     socketRef.current?.disconnect();
+    if (isRestoring) return undefined;
     if (!user?.token) {
       socketRef.current = null;
       return undefined;
@@ -220,7 +226,7 @@ export function AuthProvider({ children }) {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [user?.token]);
+  }, [isRestoring, user?.token]);
 
   const fetchAppointments = useCallback(async () => {
     if (!user?.token) return [];
@@ -249,6 +255,7 @@ export function AuthProvider({ children }) {
         user,
         adminToken: user?.adminToken || (user?.role === "admin" ? user.token : ""),
         isAuthenticated: !!user,
+        isRestoring,
         authModal,
         openAuthModal,
         closeAuthModal,

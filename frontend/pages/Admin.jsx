@@ -8,7 +8,7 @@ import { useAuth } from "../context/useAuth";
 const fallbackCategories = ["Press-Ons", "Nail Art", "Gel & BIAB", "Chrome & French", "Acrylics"];
 
 export default function Admin({ initialTab = "overview" }) {
-  const { user, adminToken, isAuthenticated } = useAuth();
+  const { user, adminToken, isAuthenticated, isRestoring } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
@@ -84,13 +84,13 @@ export default function Admin({ initialTab = "overview" }) {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "admin") return;
+    if (isRestoring || !isAuthenticated || user?.role !== "admin") return;
     loadData().catch((loadError) => setError(loadError.message));
     const refreshTimer = window.setInterval(() => {
       loadData().catch(() => {});
     }, 30000);
     return () => window.clearInterval(refreshTimer);
-  }, [isAuthenticated, user?.role, adminToken, editId]);
+  }, [isRestoring, isAuthenticated, user?.role, adminToken, editId]);
 
   if (!isAuthenticated || user?.role !== "admin") {
     return (

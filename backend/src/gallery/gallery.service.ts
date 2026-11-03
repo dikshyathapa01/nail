@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
@@ -145,7 +144,10 @@ export class GalleryService {
   async remove(id: string) {
     const item = await this.galleryRepository.findOne({ where: { id } });
     if (!item) {
-      throw new NotFoundException('Gallery item not found.');
+      // The admin list can contain an item from before a previous delete or
+      // database refresh. Treat deletion as idempotent so the stale item can
+      // be cleared from the UI without showing a misleading failure.
+      return { message: 'Gallery item already removed.' };
     }
     if (item.cloudinaryPublicId) {
       this.configureCloudinary();
