@@ -246,9 +246,6 @@ export default function Admin({ initialTab = "overview" }) {
               <label className="admin-file-field">Photo<input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(event) => setFile(event.target.files?.[0] || null)} required /></label>
               <button className="dark-button" disabled={loading}><Upload size={15} /> {loading ? "Uploading..." : "Add photo"}</button>
             </form>
-            <div className="admin-saved editorial-frosted-card"><h2>Saved photos <span>{items.length}</span></h2><div className="admin-photo-grid">
-              {items.map((item) => <article className="admin-photo-card" key={item.id}><img src={item.image} alt={item.title} /><div><strong>{item.title}</strong><small>{item.category}</small><button type="button" onClick={() => remove(`${API_BASE_URL}/gallery/${item.id}`, "Photo removed.")}><Trash2 size={15} /></button></div></article>)}
-            </div></div>
           </div>
         )}
 
