@@ -372,18 +372,16 @@ export class BookingsService implements OnModuleInit, OnModuleDestroy {
       this.userSyncGateway.emitUserEvent(savedBooking.userId, 'booking:updated', { action: 'status', booking: response });
     }
     if (status === BookingStatus.CONFIRMED || status === BookingStatus.CANCELLED || status === BookingStatus.COMPLETED) {
-      try {
-        await this.notificationsService.sendClientStatusNotification({
+      void this.notificationsService.sendClientStatusNotification({
           ...response,
           status,
-        });
-      } catch (emailError) {
+        }).catch((emailError) => {
         this.logger.error(
           `Appointment status was saved, but client notification failed: ${
             emailError instanceof Error ? emailError.message : String(emailError)
           }`,
         );
-      }
+      });
     }
     return response;
   }

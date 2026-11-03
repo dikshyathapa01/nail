@@ -110,9 +110,13 @@ export default function Admin({ initialTab = "overview" }) {
     loadData().catch((loadError) => setError(loadError.message));
   };
 
-  const run = async (action, success) => {
+  const run = async (action, success, refresh = true) => {
     setError(""); setMessage(""); setLoading(true);
-    try { await action(); await loadData(); setMessage(success); }
+    try {
+      await action();
+      if (refresh) await loadData();
+      setMessage(success);
+    }
     catch (actionError) { setError(actionError.message); }
     finally { setLoading(false); }
   };
@@ -170,7 +174,10 @@ export default function Admin({ initialTab = "overview" }) {
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.message || "Could not update appointment.");
-  }, "Appointment status updated.");
+    setAppointments((current) => current.map((appointment) => (
+      appointment.id === id ? { ...appointment, status: result.status || status } : appointment
+    )));
+  }, "Appointment status updated.", false);
 
   const addAvailabilityBlock = (event) => {
     event.preventDefault();
